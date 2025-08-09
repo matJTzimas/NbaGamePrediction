@@ -11,7 +11,9 @@ class TrainingPipelineConfig:
 
 class DataIngestionConfig:
     def __init__(self, training_pipeline_config: TrainingPipelineConfig):
-        pass 
+        self.feature_store_file_path = os.path.join(
+            self.data_ingestion_dir, training_pipeline.DATA_INGESTION_FEATURE_STORE_DIR, training_pipeline.FILENAME
+        )
 
 
 if __name__ == "__main__": 
