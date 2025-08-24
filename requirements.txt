@@ -1,3 +1,6 @@
 numpy
 pymongo
 pandas
+nba_api
+SQLAlchemy
+pg8000

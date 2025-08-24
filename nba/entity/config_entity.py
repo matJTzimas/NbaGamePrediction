@@ -1,0 +1,25 @@
+import os
+import sys
+from nba.constants import training
+from datetime import datetime
+from nba.exception.exception import NbaException
+
+
+
+class DataIngestionConfig:
+    def __init__(self):
+        self.data_ingestion_dir = os.path.join(
+            training.DATA_FOLDER, training.DATA_INGESTION_DIR_NAME
+        )
+        os.makedirs(self.data_ingestion_dir, exist_ok=True)
+        self.games_file_path = os.path.join(
+            self.data_ingestion_dir, training.DATA_INGESTION_GAMES_FILE_NAME
+        )
+        self.players_file_path = os.path.join(
+            self.data_ingestion_dir, training.DATA_INGESTION_PLAYERS_FILE_NAME
+        )
+        self.seasons = training.DATA_INGESTION_SEASONS
+        self.store_option = training.STORE_OPTION
+
+        
+

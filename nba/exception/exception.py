@@ -1,5 +1,5 @@
 import sys
-from networksecurity.logging import logger
+from nba.logging import logger
 
 class NbaException(Exception):
     def __init__(self, error_message, error_details:sys):
