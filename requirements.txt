@@ -4,3 +4,6 @@ pandas
 nba_api
 SQLAlchemy
 pg8000
+mlflow
+pyaml
+polars

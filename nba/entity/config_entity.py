@@ -21,5 +21,18 @@ class DataIngestionConfig:
         self.seasons = training.DATA_INGESTION_SEASONS
         self.store_option = training.STORE_OPTION
 
+class DataValidationConfig:
+    def __init__(self):
+        self.data_validation_dir = os.path.join(
+            training.DATA_FOLDER, training.DATA_VALIDATION_DIR_NAME
+        )
+        os.makedirs(self.data_validation_dir, exist_ok=True)
+        self.report_file_path = os.path.join(
+            self.data_validation_dir, training.DATA_VALIDATION_REPORT_FILE_NAME
+        )
+
+
+
+
         
 

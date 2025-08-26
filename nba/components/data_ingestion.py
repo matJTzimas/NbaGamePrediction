@@ -10,6 +10,8 @@ import time
 import random
 import pandas as pd 
 import os
+from nba.entity.artifact_entity import DataIngestionArtifact
+
 
 class DataIngestion:
     def __init__(self, data_ingestion_config: DataIngestionConfig):
@@ -49,6 +51,8 @@ class DataIngestion:
                 logging.info(f'Players file already exists at path: {self.data_ingestion_config.players_file_path}')
             logging.info(f'Exited the data ingestion')
 
+            return self.data_ingestion_config.players_file_path, self.data_ingestion_config.games_file_path
+
         except Exception as e:
             raise NbaException(e, sys)
 
@@ -57,8 +61,16 @@ class DataIngestion:
             logging.info(f'Initiated the data ingestion')
             if self.store_option == 'csv':
                 logging.info(f'CSV file option selected')
-                self.create_csv_from_api()
+                csv_players_path, csv_games_path = self.create_csv_from_api()
             else: 
                 logging.info(f'No valid store option selected, currently only csv is supported')
+
+            data_ingestion_artifact = DataIngestionArtifact(
+                raw_players_path=csv_players_path,
+                raw_games_path=csv_games_path
+            )
+            
+            return data_ingestion_artifact
+            
         except Exception as e:
             raise NbaException(e, sys)
