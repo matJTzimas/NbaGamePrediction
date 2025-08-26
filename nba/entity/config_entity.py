@@ -31,8 +31,16 @@ class DataValidationConfig:
             self.data_validation_dir, training.DATA_VALIDATION_REPORT_FILE_NAME
         )
 
+class DataTransformationConfig:
+    def __init__(self):
+        self.data_transformation_dir = os.path.join(
+            training.DATA_FOLDER, training.DATA_TRANSFORMATION_DIR_NAME
+        )
+        os.makedirs(self.data_transformation_dir, exist_ok=True)
 
+        self.transformed__file_path = os.path.join(
+            self.data_transformation_dir, training.DATA_TRANSFORMATION_FILE_NAME
+        )
 
-
-        
+        self.important_player_stats = training.IMPORTANT_PLAYER_STATS
 

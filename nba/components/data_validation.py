@@ -6,6 +6,8 @@ import sys
 from nba.exception.exception import NbaException
 import yaml
 import os 
+from nba.utils.main_utils import write_yaml_file
+
 
 class DataValidation:
     def __init__(self, data_validation_config: DataValidationConfig, data_ingestion_artifact: DataIngestionArtifact):
@@ -34,8 +36,8 @@ class DataValidation:
         report["players"] = self._analyze_and_report(players_df, "players")
         report["games"] = self._analyze_and_report(games_df, "games")
 
-        with open(path, "w") as f:
-            yaml.dump(report, f)
+        write_yaml_file(file_path=path, content=report,replace=True)
+
         logging.info(f"Validation report saved to {path}")
 
     def initiate_data_validation(self):

@@ -1,4 +1,7 @@
 import yaml
+from nba.exception.exception import NbaException
+import sys
+import os
 
 
 def read_yaml_file(file_path_file:str) -> dict: 
@@ -9,7 +12,7 @@ def read_yaml_file(file_path_file:str) -> dict:
         with open(file_path_file) as file_obj:
             return yaml.safe_load(file_obj)
     except Exception as e:
-        raise NetworkSecurityException(e, sys)
+        raise NbaException(e, sys)
 
 def write_yaml_file(file_path: str, content: object, replace: bool = False) -> None:
     try:
@@ -20,4 +23,4 @@ def write_yaml_file(file_path: str, content: object, replace: bool = False) -> N
         with open(file_path, "w") as file:
             yaml.dump(content, file)
     except Exception as e:
-        raise NetworkSecurityException(e, sys)
+        raise NbaException(e, sys)
