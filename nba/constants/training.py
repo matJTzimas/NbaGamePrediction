@@ -25,7 +25,7 @@ DATA_VALIDATION_REPORT_FILE_NAME: str = "report.yaml"
 DATA_VALIDATION_DIR_NAME: str = "validation"
 
 DATA_TRANSFORMATION_FILE_NAME: str = "transformation.csv"
-
+DATA_TRANSFORMATION_DIR_NAME: str = "transformed"
 
 
 IMPORTANT_PLAYER_STATS: list = ['MIN', 'FGM', 'FGA', 'FG_PCT', 'FG3M', 'FG3A', 'FG3_PCT', 'FTM',
