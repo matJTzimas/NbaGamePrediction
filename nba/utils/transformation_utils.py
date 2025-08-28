@@ -27,3 +27,13 @@ def home_away_id(games_df, game_id):
 
     return home_team_id, away_team_id
 
+
+
+def add_prefix(df: pd.DataFrame, prefix: str, included_columns: list = []) -> pd.DataFrame:
+    try:
+        columns = [col for col in df.columns if col in included_columns]
+        df.rename(columns={col: f"{prefix}_{col}" for col in columns}, inplace=True)
+        return df
+    except Exception as e:
+        raise NbaException(e, sys)
+

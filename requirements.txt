@@ -7,3 +7,4 @@ pg8000
 mlflow
 pyaml
 polars
+tqdm
