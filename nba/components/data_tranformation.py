@@ -42,6 +42,52 @@ class DataTransformation:
         return home_players_game_stats, away_players_game_stats
 
 
+    def get_player_alltime_stats_pre_gameid(self, game_id):
+        """
+        For the specified game_id, for the two teams playing, get the all time stats of all players on both teams
+        up to (but not including) the game date.  
+
+        Args:
+            - game_id (int): The game ID of the specific game.
+        Returns:
+            - tuple: (home_team_player_stats_dataframe, away_team_player_stats_dataframe) 
+
+        """
+        home_id, away_id = home_away_id(self.games_df, game_id)
+        training_cols = ["PLAYER_ID", "TEAM_ID"] + self.data_transformation_config.important_player_stats
+
+        home_players_game_stats, away_players_game_stats = self.get_players_game_stats(game_id)
+
+        game_date = self.games_df.loc[self.games_df["GAME_ID"] == game_id, "GAME_DATE"].iloc[0]
+
+        # player games before this game
+        mask = (
+            (self.players_df["GAME_DATE"] < game_date)
+            & (self.players_df["TEAM_ID"].isin([home_id, away_id]))
+        )
+        season_df = self.players_df.loc[mask, training_cols]
+
+        players_season_stats = (
+            season_df
+            .groupby(["PLAYER_ID", "TEAM_ID"], as_index=False)[training_cols]
+            .mean()
+        )
+        print(f'Number of player game logs found for this alltime before this game: {season_df.shape[0]}')
+        # match only players who appeared in this specific game
+        home_players_alltime_stats = players_season_stats[
+            players_season_stats["PLAYER_ID"].isin(home_players_game_stats["PLAYER_ID"])
+        ].copy()
+        away_players_alltime_stats = players_season_stats[
+            players_season_stats["PLAYER_ID"].isin(away_players_game_stats["PLAYER_ID"])
+        ].copy()
+
+        home_players_alltime_stats['HOME_ID'] = away_players_alltime_stats['HOME_ID'] = home_id
+        
+        away_players_alltime_stats['AWAY_ID'] = home_players_alltime_stats['AWAY_ID'] = away_id
+
+        return home_players_alltime_stats, away_players_alltime_stats
+
+
     def get_player_season_stats_pre_gameid(self, game_id):
         """
         For the specified game_id, for the two teams playing, get the season stats of all players on both teams
@@ -58,15 +104,18 @@ class DataTransformation:
 
         home_players_game_stats, away_players_game_stats = self.get_players_game_stats(game_id)
 
-        game_date = self.games_df.loc[self.games_df["GAME_ID"] == game_id, "GAME_DATE"].iloc[0]
-
-        # season stats before this game
+        current_game_df = self.games_df.loc[self.games_df["GAME_ID"] == game_id, :]
+        game_date = current_game_df.iloc[0]["GAME_DATE"]
+        season_id = current_game_df.iloc[0]["SEASON_YEAR"]
+        print(f'Game date: {game_date}, Season: {season_id}')
+        # player games before this game
         mask = (
             (self.players_df["GAME_DATE"] < game_date)
+            & (self.players_df["SEASON_YEAR"] == season_id)
             & (self.players_df["TEAM_ID"].isin([home_id, away_id]))
         )
         season_df = self.players_df.loc[mask, training_cols]
-
+        print(f'Number of player game logs found for this season before this game: {season_df.shape[0]}')
         players_season_stats = (
             season_df
             .groupby(["PLAYER_ID", "TEAM_ID"], as_index=False)[training_cols]
@@ -90,11 +139,9 @@ class DataTransformation:
 
 
 
-
     def initialize_data_transformation(self):
         try: 
-            home, away = self.get_player_season_stats_pre_gameid(game_id=12300002)
-            print(home.head())
-            print(away.head())
+            home, away = self.get_player_season_stats_pre_gameid(game_id=22000348)
+            home, away = self.get_player_alltime_stats_pre_gameid(game_id=22000348)
         except Exception as e:
             raise NbaException(e, sys)

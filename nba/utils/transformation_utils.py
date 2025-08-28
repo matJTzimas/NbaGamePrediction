@@ -2,7 +2,7 @@ import pandas as pd
 from nba_api.stats.static import teams
 
 def home_away_id(games_df, game_id):
-    """"
+    """
     Returns the home and away team IDs based on the game matchup string.
 
     Parameters:
@@ -13,15 +13,17 @@ def home_away_id(games_df, game_id):
     - tuple: (home_team_id, away_team_id)
     """
     df_teams = pd.DataFrame(teams.get_teams())
-    mat = games_df[games_df['GAME_ID']==game_id]['MATCHUP'].iloc[0]
+    mat = games_df.loc[games_df['GAME_ID'] == game_id, 'MATCHUP'].iloc[0]
+
+
     if '@' in mat:
         teams_abb = mat.split(' @ ')
-        home_team_id = df_teams[df_teams['abbreviation']==teams_abb[1]]['id'].item()
-        away_team_id = df_teams[df_teams['abbreviation']==teams_abb[0]]['id'].item()
-    else : 
-        teams_abb = mat.split('vs.')
-        home_team_id = df_teams[df_teams['abbreviation']==teams_abb[0]]['id'].item()
-        away_team_id = df_teams[df_teams['abbreviation']==teams_abb[1]]['id'].item()
+        home_team_id = df_teams.loc[df_teams['abbreviation'] == teams_abb[1], 'id'].iloc[0]
+        away_team_id = df_teams.loc[df_teams['abbreviation'] == teams_abb[0], 'id'].iloc[0]
+    else:
+        teams_abb = mat.split(' vs. ')
+        home_team_id = df_teams.loc[df_teams['abbreviation'] == teams_abb[0], 'id'].iloc[0]
+        away_team_id = df_teams.loc[df_teams['abbreviation'] == teams_abb[1], 'id'].iloc[0]
 
     return home_team_id, away_team_id
 
