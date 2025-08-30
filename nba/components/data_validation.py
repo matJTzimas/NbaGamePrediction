@@ -31,10 +31,11 @@ class DataValidation:
             "columns": columns_info
         }
 
-    def generate_report_yaml(self, players_df: pd.DataFrame, games_df: pd.DataFrame, path: str):
+    def generate_report_yaml(self, players_df: pd.DataFrame, games_df: pd.DataFrame, odds_df: pd.DataFrame, path: str):
         report = {}
         report["players"] = self._analyze_and_report(players_df, "players")
         report["games"] = self._analyze_and_report(games_df, "games")
+        report["odds"] = self._analyze_and_report(odds_df, "odds")
 
         write_yaml_file(file_path=path, content=report,replace=True)
 
@@ -45,15 +46,17 @@ class DataValidation:
             # Read the two dataframes
             players_df = pd.read_csv(self.data_ingestion_artifact.raw_players_path)
             games_df = pd.read_csv(self.data_ingestion_artifact.raw_games_path)
+            odds_df = pd.read_csv(self.data_ingestion_artifact.raw_odds_path)
 
             logging.info("Data validation -> report.yaml.")
             # Analyze, clean, and report
             report_path = self.data_validation_config.report_file_path if hasattr(self.data_validation_config, "report_file_path") else "report.yaml"
-            self.generate_report_yaml(players_df, games_df, report_path)
+            self.generate_report_yaml(players_df, games_df,odds_df, report_path)
 
             # Clean dataframes (drop missing rows)
             players_clean = players_df.dropna()
             games_clean = games_df.dropna()
+            odds_df_clean = odds_df # no because we will replace them
             logging.info(f'Data validation -> save new csv files.')
 
 
@@ -74,10 +77,19 @@ class DataValidation:
                 logging.info("Missing values were found and removed in games data. Cleaned and original DataFrames differ.")
                 validated_games_path = os.path.join(self.data_validation_config.data_validation_dir, os.path.basename(self.data_ingestion_artifact.raw_games_path))
                 games_clean.to_csv(validated_games_path, index=False)
+            
+            if odds_df_clean.equals(odds_df):
+                logging.info("No missing values found in odds data. Cleaned and original DataFrames are identical.")
+                validated_odds_path = self.data_ingestion_artifact.raw_odds_path
+            else:
+                logging.info("Missing values were found and removed in odds data. Cleaned and original DataFrames differ.")
+                validated_odds_path = os.path.join(self.data_validation_config.data_validation_dir, os.path.basename(self.data_ingestion_artifact.raw_odds_path))
+                odds_df_clean.to_csv(validated_odds_path, index=False)
 
             data_validation_artifact = DataValidationArtifact(
                 validated_players_path=validated_players_path,
                 validated_games_path=validated_games_path,
+                validated_odds_path=validated_odds_path,
                 report_file_path=report_path
             )
 

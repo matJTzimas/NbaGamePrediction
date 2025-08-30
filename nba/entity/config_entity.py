@@ -18,6 +18,9 @@ class DataIngestionConfig:
         self.players_file_path = os.path.join(
             self.data_ingestion_dir, training.DATA_INGESTION_PLAYERS_FILE_NAME
         )
+        self.odds_file_path = os.path.join(
+            self.data_ingestion_dir, training.DATA_INGESTION_ODDS_FILE_NAME
+        )
         self.seasons = training.DATA_INGESTION_SEASONS
         self.store_option = training.STORE_OPTION
 
@@ -44,3 +47,6 @@ class DataTransformationConfig:
 
         self.important_player_stats = training.IMPORTANT_PLAYER_STATS
         self.force_rebuild_csv = training.DATA_TRANSFORMATION_FORCE_REBUILD_CSV
+        self.important_odds_stats = training.IMPORTANT_ODDS_STATS
+        self.mapping_dict = training.MAPPING_DICT
+                                        

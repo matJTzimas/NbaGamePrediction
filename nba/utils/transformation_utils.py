@@ -1,5 +1,7 @@
 import pandas as pd
 from nba_api.stats.static import teams
+import polars as pl
+import numpy as np
 
 def home_away_id(games_df, game_id):
     """
@@ -37,3 +39,31 @@ def add_prefix(df: pd.DataFrame, prefix: str, included_columns: list = []) -> pd
     except Exception as e:
         raise NbaException(e, sys)
 
+def moneyline_to_probability(row):
+    moneyline_home = row['moneyline_home']
+    moneyline_away = row['moneyline_away']
+
+    def convert_moneyline_to_probability(moneyline):
+        if moneyline > 0:
+            return 100 / (moneyline + 100)
+        else:
+            return -moneyline / (-moneyline + 100)
+
+    if pd.isna(moneyline_home) or pd.isna(moneyline_away):
+        prob_home, prob_away = game_score_to_prob(np.array([row['score_home'],row['score_away']]))
+        return prob_home, prob_away
+
+    prob_home = convert_moneyline_to_probability(moneyline_home)
+    prob_away = convert_moneyline_to_probability(moneyline_away)
+    total_prob = prob_home + prob_away
+
+    return prob_home / total_prob, prob_away / total_prob
+
+    
+
+def game_score_to_prob(x):
+    """Compute softmax values for each sets of scores in x."""
+    x = x/20
+    e_x = np.exp(x - np.max(x))
+    res = e_x / e_x.sum()
+    return (res[0].item(),res[1].item())

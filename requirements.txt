@@ -8,3 +8,4 @@ mlflow
 pyaml
 polars
 tqdm
+kagglehub
