@@ -13,3 +13,8 @@ class DataValidationArtifact:
     validated_odds_path: str
     report_file_path: str
 
+@dataclass
+class DataTransformationArtifacts:
+    tranformed_data_path: str
+    split_yaml_path: str
+

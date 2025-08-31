@@ -28,7 +28,7 @@ DATA_VALIDATION_DIR_NAME: str = "validation"
 
 DATA_TRANSFORMATION_FILE_NAME: str = "transformation.csv"
 DATA_TRANSFORMATION_DIR_NAME: str = "transformed"
-DATA_TRANSFORMATION_FORCE_REBUILD_CSV: bool = True
+DATA_TRANSFORMATION_FORCE_REBUILD_CSV: bool = False
 
 IMPORTANT_PLAYER_STATS: list = ['MIN', 'FGM', 'FGA', 'FG_PCT', 'FG3M', 'FG3A', 'FG3_PCT', 'FTM',
        'FTA', 'FT_PCT', 'OREB', 'DREB', 'REB', 'AST', 'TOV', 'STL', 'BLK',
@@ -68,4 +68,7 @@ MAPPING_DICT = {
     "por": "POR",
     "atl": "ATL"
 }
+
+TEST_SIZE: float = 0.2
+SPLIT_FILE_NAME: str = "split.yaml"
 

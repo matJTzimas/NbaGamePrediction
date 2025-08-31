@@ -9,3 +9,7 @@ pyaml
 polars
 tqdm
 kagglehub
+torch
+torchvision
+torchaudio
+sklearn

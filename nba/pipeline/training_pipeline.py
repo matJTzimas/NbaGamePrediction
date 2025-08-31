@@ -22,15 +22,16 @@ class TrainingPipeline:
             logging.info(f'Data ingestion completed successfully.')
             
             logging.info(f'Data validation.')
-
             data_validation_config = DataValidationConfig()
             data_validation = DataValidation(data_validation_config=data_validation_config, data_ingestion_artifact=data_ingestion_artifact)
             data_validation_artifact = data_validation.initiate_data_validation()
             logging.info(f'Data validation completed successfully.')
 
+            logging.info(f'Data transformation.')
             data_transformation_config = DataTransformationConfig()
             data_data_transformation = DataTransformation(data_transformation_config=data_transformation_config, data_validation_artifact=data_validation_artifact)
-            data_transformation = data_data_transformation.initialize_data_transformation()
+            data_transformation_artifact = data_data_transformation.initialize_data_transformation()
+            logging.info(f'Data transformation completed successfully.')
 
         except Exception as e:
             raise NbaException(e, sys)

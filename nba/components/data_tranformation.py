@@ -10,6 +10,8 @@ from nba.utils.transformation_utils import home_away_id, add_prefix, moneyline_t
 from tqdm import tqdm
 from nba_api.stats.static import teams
 import numpy as np
+from sklearn.model_selection import train_test_split
+import yaml
 
 class DataTransformation:
     def __init__(self, data_transformation_config: DataTransformationConfig, 
@@ -239,33 +241,69 @@ class DataTransformation:
         except Exception as e:
             raise NbaException(e, sys)
 
+    def create_train_test_yaml(self, final_df):
+        """
+        Based on the final_df final game ids create two txt: train and test 
+        """
+        try :
+            logging.info(f'CREATE SPLIT YAML FILE')
+            unique_game_ids = final_df['GAME_ID'].unique()
+            # Split unique_game_ids into train and test based on the specified split ratio
+            train_ids, test_ids = train_test_split(
+                unique_game_ids,
+                test_size=self.data_transformation_config.test_size,
+                random_state=42,
+                shuffle=True
+            )
+
+            split_dict = {
+                "train_ids": train_ids.tolist(),
+                "test_ids": test_ids.tolist()
+            }
+
+            write_yaml_file(file_path=self.data_transformation_config.split_file_path, content=split_dict, replace=True)
+
+        except Exception as e:
+            raise NbaException(e, sys)
+
 
     def initialize_data_transformation(self):
         try:
             logging.info(f'Initializing data transformation')
 
-            logging.info(f'Concatenate all gameids player data')
-            concatenated_df = self.concatenate_gameids_data()
-            
+            if not os.path.exists(self.data_transformation_config.transformed_file_path):
+                self.data_transformation_config.force_rebuild_csv = True # if the file does not exist build it
 
-            logging.info(f'Transform Odd data')
-            self.transform_odd_data()
+            if self.data_transformation_config.force_rebuild_csv:
+                logging.info(f'Concatenate all gameids player data')
+                concatenated_df = self.concatenate_gameids_data()
+                
+                logging.info(f'Transform Odd data')
+                self.transform_odd_data()
 
+                logging.info(f'Add the odd data to the concatenated_df')
+                final_df = concatenated_df.merge(
+                    self.odds_df,
+                    on=["GAME_DATE", "HOME_ID", "AWAY_ID"], 
+                    how="inner"                     
+                )
+                logging.info(f'Creation of the {self.data_transformation_config.transformed_file_path} file')    
 
-            logging.info(f'Add the odd data to the concatenated_df')
-            final_df = concatenated_df.merge(
-                self.odds_df,
-                on=["GAME_DATE", "HOME_ID", "AWAY_ID"],  # list of columns
-                how="inner"                     # or "left", "right", "outer"
-            )
-
-            if os.path.exists(self.data_transformation_config.transformed_file_path):
-                if self.data_transformation_config.force_rebuild_csv:
-                    logging.info(f'Overwriting existing transformed')    
-                    final_df.to_csv(self.data_transformation_config.transformed_file_path, mode='w', index=False, header=True)
-            else:
                 final_df.to_csv(self.data_transformation_config.transformed_file_path, mode='w', index=False, header=True)
+            else : 
+                logging.info(f'File {self.data_transformation_config.transformed_file_path} exist with rebuild = False')
+                logging.info(f'Reading the csv to final_df')
+                final_df = pd.read_csv(self.data_transformation_config.transformed_file_path)
+
             logging.info(f'Data transformation completed. Transformed file path: {self.data_transformation_config.transformed_file_path}')
+
+            
+            self.create_train_test_yaml(final_df)
+            data_transformation_artifact = DataTransformationArtifacts(
+                tranformed_data_path=self.data_transformation_config.transformed_file_path,
+                split_yaml_path=self.data_transformation_config.split_file_path
+                )
+            return data_transformation_artifact
 
         except Exception as e:
             raise NbaException(e, sys)

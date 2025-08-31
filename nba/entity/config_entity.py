@@ -49,4 +49,11 @@ class DataTransformationConfig:
         self.force_rebuild_csv = training.DATA_TRANSFORMATION_FORCE_REBUILD_CSV
         self.important_odds_stats = training.IMPORTANT_ODDS_STATS
         self.mapping_dict = training.MAPPING_DICT
+        self.test_size = training.TEST_SIZE
+
+        self.split_file_path = os.path.join(
+            self.data_transformation_dir, training.SPLIT_FILE_NAME
+        )
+
+        
                                         
