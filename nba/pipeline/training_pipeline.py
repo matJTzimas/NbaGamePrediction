@@ -1,11 +1,12 @@
-from nba.entity.config_entity import DataIngestionConfig, DataValidationConfig, DataTransformationConfig
-from nba.entity.artifact_entity import DataIngestionArtifact, DataValidationArtifact
+from nba.entity.config_entity import DataIngestionConfig, DataValidationConfig, DataTransformationConfig, MLPConfig
+from nba.entity.artifact_entity import DataIngestionArtifact, DataValidationArtifact, DataTransformationArtifact
 import sys 
 from nba.exception.exception import NbaException
 from nba.logging.logger import logging
 from nba.components.data_ingestion import DataIngestion
 from nba.components.data_validation import DataValidation
 from nba.components.data_tranformation import DataTransformation
+from nba.components.model_trainer import ModelTrainer
 import os
 
 class TrainingPipeline:
@@ -32,6 +33,12 @@ class TrainingPipeline:
             data_data_transformation = DataTransformation(data_transformation_config=data_transformation_config, data_validation_artifact=data_validation_artifact)
             data_transformation_artifact = data_data_transformation.initialize_data_transformation()
             logging.info(f'Data transformation completed successfully.')
+
+            logging.info(f'Model training.')
+            model_trainer_config = MLPConfig()
+            model_trainer = ModelTrainer(mlp_config=model_trainer_config, data_transformation_artifact=data_transformation_artifact)
+            model_trainer_artifact = model_trainer.initiate_model_trainer()
+            logging.info(f'Model training completed successfully.')
 
         except Exception as e:
             raise NbaException(e, sys)

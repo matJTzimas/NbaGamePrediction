@@ -257,8 +257,8 @@ class DataTransformation:
             )
 
             split_dict = {
-                "train_ids": train_ids.tolist(),
-                "test_ids": test_ids.tolist()
+                "train": train_ids.tolist(),
+                "test": test_ids.tolist()
             }
 
             write_yaml_file(file_path=self.data_transformation_config.split_file_path, content=split_dict, replace=True)
@@ -299,8 +299,8 @@ class DataTransformation:
 
             
             self.create_train_test_yaml(final_df)
-            data_transformation_artifact = DataTransformationArtifacts(
-                tranformed_data_path=self.data_transformation_config.transformed_file_path,
+            data_transformation_artifact = DataTransformationArtifact(
+                transformed_data_path=self.data_transformation_config.transformed_file_path,
                 split_yaml_path=self.data_transformation_config.split_file_path
                 )
             return data_transformation_artifact

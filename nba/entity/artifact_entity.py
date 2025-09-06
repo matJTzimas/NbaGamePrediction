@@ -14,7 +14,7 @@ class DataValidationArtifact:
     report_file_path: str
 
 @dataclass
-class DataTransformationArtifacts:
-    tranformed_data_path: str
+class DataTransformationArtifact:
+    transformed_data_path: str
     split_yaml_path: str
 

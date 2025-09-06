@@ -55,5 +55,33 @@ class DataTransformationConfig:
             self.data_transformation_dir, training.SPLIT_FILE_NAME
         )
 
-        
-                                        
+class GeneralModelConfig:
+    def __init__(self):
+        self.split_file_name = training.SPLIT_FILE_NAME
+        self.random_state = training.RANDOM_STATE
+        self.training_stats = training.IMPORTANT_PLAYER_STATS
+        self.training_stats_categories = training.TRAINING_STATS_CATEGORIES
+
+class MLPConfig:
+    def __init__(self):
+        self.general_model_config = GeneralModelConfig()
+        self.mlp_players_encoder_hidden_num_layers_range = training.MLP_PLAYERS_ENCODER_HIDDEN_NUM_LAYERS_RANGE
+        self.mlp_players_encoder_hidden_size_range = training.MLP_PLAYERS_ENCODER_HIDDEN_SIZE_RANGE
+        self.mlp_learning_rate_range = training.MLP_LEARNING_RATE_RANGE
+        self.mlp_batch_size_range = training.MLP_BATCH_SIZE_RANGE
+        self.mlp_num_epochs = training.MLP_NUM_EPOCHS
+        self.mlp_dropout = training.MLP_DROPOUT
+
+        self.imputer = training.MLP_IMPUTER
+
+        self.mlp_dir = os.path.join(training.ARTIFACT_DIR, "MLP")
+        os.makedirs(self.mlp_dir, exist_ok=True)
+
+        self.model_name = "mlp_model.pth"
+        self.model_path = os.path.join(self.mlp_dir, self.model_name)
+
+        self.mlp_imputer = training.MLP_IMPUTER
+
+        self.feature_scaler_path = os.path.join(self.mlp_dir, training.MLP_FEATURE_SCALER_FILE_NAME)
+        self.target_scaler_path = os.path.join(self.mlp_dir, training.MLP_TARGET_SCALER_FILE_NAME)
+

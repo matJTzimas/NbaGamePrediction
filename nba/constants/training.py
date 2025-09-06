@@ -2,6 +2,7 @@ import os
 import sys
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 
 TRAINING_PIPELINE:str = "NbaGamePrediction"
 ARTIFACT_DIR: str = "Artifacts"
@@ -71,4 +72,21 @@ MAPPING_DICT = {
 
 TEST_SIZE: float = 0.2
 SPLIT_FILE_NAME: str = "split.yaml"
+RANDOM_STATE: int = 42
+TRAINING_STATS_CATEGORIES: list = ['SEASON', 'ALL']
 
+####### MLP ########
+MLP_PLAYERS_ENCODER_HIDDEN_NUM_LAYERS_RANGE: list = [2, 3, 4]
+MLP_PLAYERS_ENCODER_HIDDEN_SIZE_RANGE: list = [32, 64, 128]
+# originally is MLP_HEAD_LIST = [MLP_PLAYERS_ENCODER_HIDDEN_LIST[-1], 32, ...]
+# BUT DUE TO AUTOMATION ISSUES WE HAVE TO PUT THE FIRST LAYER EQUAL TO THE LAST LAYER OF THE ENCODER * 2 (FOR BOTH TEAMS)
+MLP_HEAD_LIST: list = [32, 16 ,2]
+MLP_PLAYERS_ACTIVATION: str = "ReLU"
+MLP_LEARNING_RATE_RANGE: list = [1e-5, 1e-4, 1e-3]
+MLP_DROPOUT: float = 0.1
+MLP_BATCH_SIZE_RANGE: list = [16, 32, 64]
+MLP_NUM_EPOCHS: int = 50
+MLP_IMPUTER: StandardScaler = StandardScaler()
+MLP_FEATURE_SCALER_FILE_NAME: str = "mlp_feature_scaler.pkl"
+MLP_TARGET_SCALER_FILE_NAME: str = "mlp_target_scaler.pkl"
+######################
