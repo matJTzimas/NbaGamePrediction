@@ -4,7 +4,8 @@ pandas
 nba_api
 SQLAlchemy
 pg8000
-mlflow
+mlflow < 3 
+dagshub
 pyaml
 polars
 tqdm
@@ -12,4 +13,5 @@ kagglehub
 torch
 torchvision
 torchaudio
-sklearn
+scikit-learn
+optuna

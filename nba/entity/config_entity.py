@@ -66,14 +66,14 @@ class MLPConfig:
     def __init__(self):
         self.general_model_config = GeneralModelConfig()
         self.mlp_players_encoder_hidden_num_layers_range = training.MLP_PLAYERS_ENCODER_HIDDEN_NUM_LAYERS_RANGE
-        self.mlp_players_encoder_hidden_size_range = training.MLP_PLAYERS_ENCODER_HIDDEN_SIZE_RANGE
+        self.mlp_players_encoder_hidden_size = training.MLP_PLAYERS_ENCODER_HIDDEN_SIZE
         self.mlp_learning_rate_range = training.MLP_LEARNING_RATE_RANGE
         self.mlp_batch_size_range = training.MLP_BATCH_SIZE_RANGE
         self.mlp_num_epochs = training.MLP_NUM_EPOCHS
         self.mlp_dropout = training.MLP_DROPOUT
-
+        self.mlp_players_activation = training.MLP_PLAYERS_ACTIVATION
         self.imputer = training.MLP_IMPUTER
-
+        self.mlp_head_list = training.MLP_HEAD_LIST
         self.mlp_dir = os.path.join(training.ARTIFACT_DIR, "MLP")
         os.makedirs(self.mlp_dir, exist_ok=True)
 

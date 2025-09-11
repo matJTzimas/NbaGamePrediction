@@ -3,6 +3,8 @@ import sys
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+import torch
+import torch.nn as nn
 
 TRAINING_PIPELINE:str = "NbaGamePrediction"
 ARTIFACT_DIR: str = "Artifacts"
@@ -18,8 +20,8 @@ DATA_INGESTION_PLAYERS_FILE_NAME: str = "players.csv"
 DATA_INGESTION_ODDS_FILE_NAME: str = "odds.csv"
 
 DATA_INGESTION_DIR_NAME: str = "raw"
-# DATA_INGESTION_SEASONS: list = ['2018-19','2019-20','2020-21','2021-22','2022-23','2023-24']
-DATA_INGESTION_SEASONS: list = ['2019-20','2020-21','2021-22']
+DATA_INGESTION_SEASONS: list = ['2015-16','2016-17','2017-18','2018-19','2019-20','2020-21','2021-22','2022-23','2023-24']
+# DATA_INGESTION_SEASONS: list = ['2019-20','2020-21','2021-22']
 
 # DATA_INGESTION_FEATURE_STORE_DIR: str = "feature_store"
 # DATA_INGESTION_TRAIN_TEST_SPLIT_RATIO: float = 0.2
@@ -77,15 +79,15 @@ TRAINING_STATS_CATEGORIES: list = ['SEASON', 'ALL']
 
 ####### MLP ########
 MLP_PLAYERS_ENCODER_HIDDEN_NUM_LAYERS_RANGE: list = [2, 3, 4]
-MLP_PLAYERS_ENCODER_HIDDEN_SIZE_RANGE: list = [32, 64, 128]
+MLP_PLAYERS_ENCODER_HIDDEN_SIZE: list = [64, 64, 8]
 # originally is MLP_HEAD_LIST = [MLP_PLAYERS_ENCODER_HIDDEN_LIST[-1], 32, ...]
 # BUT DUE TO AUTOMATION ISSUES WE HAVE TO PUT THE FIRST LAYER EQUAL TO THE LAST LAYER OF THE ENCODER * 2 (FOR BOTH TEAMS)
-MLP_HEAD_LIST: list = [32, 16 ,2]
-MLP_PLAYERS_ACTIVATION: str = "ReLU"
+MLP_HEAD_LIST: list = [64, 16]
+MLP_PLAYERS_ACTIVATION: nn.Module = nn.ReLU()
 MLP_LEARNING_RATE_RANGE: list = [1e-5, 1e-4, 1e-3]
 MLP_DROPOUT: float = 0.1
 MLP_BATCH_SIZE_RANGE: list = [16, 32, 64]
-MLP_NUM_EPOCHS: int = 50
+MLP_NUM_EPOCHS: int = 2
 MLP_IMPUTER: StandardScaler = StandardScaler()
 MLP_FEATURE_SCALER_FILE_NAME: str = "mlp_feature_scaler.pkl"
 MLP_TARGET_SCALER_FILE_NAME: str = "mlp_target_scaler.pkl"
