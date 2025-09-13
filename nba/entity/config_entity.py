@@ -85,3 +85,20 @@ class MLPConfig:
         self.feature_scaler_path = os.path.join(self.mlp_dir, training.MLP_FEATURE_SCALER_FILE_NAME)
         self.target_scaler_path = os.path.join(self.mlp_dir, training.MLP_TARGET_SCALER_FILE_NAME)
 
+class InferenceConfig:
+    def __init__(self, model_name: str):
+        self.inference_dir = os.path.join(training.ARTIFACT_DIR, training.INFERENCE_DIR_NAME)
+        os.makedirs(self.inference_dir, exist_ok=True)
+        self.important_player_stats = training.IMPORTANT_PLAYER_STATS
+
+        if model_name == "mlp":
+            model_config = MLPConfig()
+
+        self.model_path = model_config.model_path
+        self.feature_scaler_path = model_config.feature_scaler_path
+        self.inference_stats = training.INFERENCE_STATS
+
+
+
+
+

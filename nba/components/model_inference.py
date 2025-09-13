@@ -1,44 +1,188 @@
 import os
 import sys
-
+import time
 import pandas as pd
 
 from nba_api.stats.endpoints import commonteamroster
 from nba_api.stats.static import teams
 from nba_api.stats.endpoints import scheduleleaguev2
+from nba_api.stats.endpoints import playercareerstats
+from nba_api.stats.endpoints import boxscoresummaryv2
+
 
 from nba.logging.logger import logging
 from nba.exception.exception import NbaException
 from nba.utils.transformation_utils import add_prefix, home_away_id
 from nba.entity.config_entity import InferenceConfig
 from nba.utils.main_utils import load_object
+from dotenv import load_dotenv
+load_dotenv()  # this reads .env and puts vars into os.environ
+import mlflow
+mlflow.set_tracking_uri("https://dagshub.com/matJTzimas/NbaGamePrediction.mlflow")
+import torch
+import torch.nn as nn
 
 
 class ModelInference:
-    def __init__(self, inference_config: InferenceConfig):
+    def __init__(self):
         self.model = None
-        self.inference_config = inference_config
+        self.inference_config = InferenceConfig(model_name="mlp")
 
-        scheduled_games = scheduleleaguev2.ScheduleLeagueV2(
-                league_id=LEAGUE,
-                season="2025",
-                timeout=30
-            ).get_data_frames()[0].loc[scheduled_games['gameLabel']=='',:]
-
+        scheduled_games = scheduleleaguev2.ScheduleLeagueV2(league_id="00", season="2024", timeout=30).get_data_frames()[0]
+        scheduled_games = scheduled_games.loc[scheduled_games['gameLabel']=='',:]
         self.scheduled_games = scheduled_games[['gameDate', 'gameId', 'homeTeam_teamId', 'homeTeam_teamTricode', 'awayTeam_teamId', 'awayTeam_teamTricode']]
+        self.scheduled_games.loc[:, 'gameDate'] = pd.to_datetime(self.scheduled_games['gameDate']).dt.date
+
+        self.inference_stats_cols = self.inference_config.inference_stats
+        self.imputer_scaler = load_object(file_path=self.inference_config.feature_scaler_path)
+
+        model_uri = "models:/my_cool_model/2"
+        self.model = mlflow.pytorch.load_model(model_uri=model_uri)
+        
+        self.device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+        self.model.to(self.device).eval()
+        logging.info(f"Loaded model for inference.")
 
 
+    def games_today(self):
+        """
+            return a [N,2] list of tuples with [home_team_id, away_team_id]
+        """
+        try:
+            # today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('today').strftime('%Y-%m-%d')]
+            today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2024-10-23').date()] # --- for testing ---
+            if today_games.empty:
+                logging.info("No games scheduled for today.")
+                return []
+            home_away_list = []
+            for i in range(len(today_games)):
+                game_id = int(today_games.iloc[i]['gameId'])
+                home_team_id = int(today_games.iloc[i]['homeTeam_teamId'])
+                away_team_id = int(today_games.iloc[i]['awayTeam_teamId'])
+                home_away_list.append((home_team_id, away_team_id, game_id))
+            return home_away_list
+        except Exception as e:
+            raise NbaException(e, sys)    
+
+    def inference_today_games(self):
+
+        winners = [] 
+        for game_info in self.games_today():
+            home_team_id, away_team_id, game_id = game_info
+            logging.info(f"Inference: Getting rosters for game {game_id} between {home_team_id} and {away_team_id}")
+            home_roster = self.get_roster(home_team_id)
+            away_roster = self.get_roster(away_team_id)
+
+            home_roster = self.drop_inactive_players_roster(game_id, home_roster)
+            away_roster = self.drop_inactive_players_roster(game_id, away_roster)
+
+            home_stats = self.safe_players_stats(home_roster, self.inference_config.important_player_stats)
+            away_stats = self.safe_players_stats(away_roster, self.inference_config.important_player_stats)
+
+            home_stats = self.sort_and_pad_roster(home_stats)
+            away_stats = self.sort_and_pad_roster(away_stats)
+
+            home_stats = self.imputer_scaler.transform(home_stats[self.imputer_scaler.feature_names_in_])
+            away_stats = self.imputer_scaler.transform(away_stats[self.imputer_scaler.feature_names_in_])
+
+            logging.info(f"Completed fetching and processing rosters for game {game_id} between {home_team_id} and {away_team_id}")
+            home_stats = torch.tensor(home_stats, dtype=torch.float32).unsqueeze(0).to(self.device)
+            away_stats = torch.tensor(away_stats, dtype=torch.float32).unsqueeze(0).to(self.device)
+
+            home_prob = self.model(home_stats, away_stats)
+
+            if home_prob.item() < 0.5:
+                winners.append([game_id, home_prob.item(), 1])
+            else:
+                winners.append([game_id,home_prob.item(), 0])
+
+        return winners
 
     
+    def sort_and_pad_roster(self, roster_df):
+        """
+        Sorts the roster by ALL_PTS descending, keeps top 12, and pads with zero rows if less than 12.
+        Returns the new roster DataFrame.
+        """
+        sorted_roster = roster_df.sort_values(by="ALL_PTS", ascending=False).reset_index(drop=True)
+        num_players = len(sorted_roster)
+        if num_players < 12:
+            # Create zero rows with same columns
+            zero_rows = pd.DataFrame(0, index=range(12 - num_players), columns=sorted_roster.columns)
+            sorted_roster = pd.concat([sorted_roster, zero_rows], ignore_index=True)
+        else:
+            sorted_roster = sorted_roster.iloc[:12].reset_index(drop=True)
+        return sorted_roster
 
-    def inference_for_gamedate(self, game_date: str):
-        return None
-    def inference_for_gameid(self, game_id: str):
-        return None
-        
+    def safe_players_stats(self, roster, important_stats):
+        players_stats = []
+        for player_id in roster['PLAYER_ID']:
+            try:
+                stats = self.get_player_stats(player_id, important_stats)
+                players_stats.append(stats)
+            except Exception as e:
+                logging.warning(f"Could not fetch stats for player {player_id}: {e}")
+        if players_stats:
+            return pd.concat(players_stats, ignore_index=True)
+        else:
+            return pd.DataFrame()  # Return empty DataFrame if no stats were fetched
+
+    @staticmethod
+    def drop_inactive_players_roster(game_id, roster):
+        """
+        Returns a DataFrame of active players for the given game_id.
+        """
+        try:
+            bs = boxscoresummaryv2.BoxScoreSummaryV2(game_id=str(game_id).zfill(10)).inactive_players.get_data_frame()
+            if bs.empty:
+                logging.info("No inactive players today.")
+                return roster
+
+            roster_df = bs.loc[:, ['PLAYER_ID', 'TEAM_ID']]
+            roster = roster[~roster['PLAYER_ID'].isin(roster_df['PLAYER_ID'])]
+            return roster
+        except Exception as e:
+            raise NbaException(e, sys)
+
+
     @staticmethod 
     def get_roster(team_id):
         roster = commonteamroster.CommonTeamRoster(team_id=team_id)
         roster_df = roster.get_data_frames()[0]  # the first DF = roster
         roster_df = roster_df.loc[:, ['PLAYER_ID', 'TeamID' ]]
         return roster_df
+
+    @staticmethod
+    def get_player_stats(player_id: int, important_stats: list, timeout: int = 60):
+        """
+        Returns a dict of DataFrames for the player's career:
+        """
+
+        # Gentle pause helps avoid throttling if calling repeatedly
+        time.sleep(0.9)
+        pcs = playercareerstats.PlayerCareerStats(
+            player_id=player_id,
+            per_mode36="PerGame",   # or 'Per36', 'Totals'
+            timeout=timeout
+        )
+        dfs = pcs.get_data_frames()[0]
+
+        tables = {
+            t["name"]: pd.DataFrame(t["rowSet"], columns=t["headers"])
+            for t in pcs.get_dict()['resultSets']
+        }
+        # Common tables of interest
+        out = {
+            "season_totals_regular": tables.get("SeasonTotalsRegularSeason"),
+            "career_totals_regular": tables.get("CareerTotalsRegularSeason")
+        }
+
+        season = out["season_totals_regular"].iloc[[-1], :].reset_index(drop=True)
+        career = out["career_totals_regular"][important_stats].reset_index(drop=True)
+        season = add_prefix(season, "SEASON", important_stats)
+        career = add_prefix(career, "ALL", important_stats)
+
+        final_player = pd.concat([season, career], axis=1)
+
+        return final_player
+

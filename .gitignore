@@ -5,4 +5,7 @@ logs/*
 __pycache__/
 *.ipynb
 .vscode/
+__pycache__/
 **/__pycache__/
+*.py[cod]
+.env

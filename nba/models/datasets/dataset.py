@@ -75,7 +75,7 @@ class NBADataset(Dataset):
         features = features.sort_values(by=by_col, ascending=False).reset_index(drop=True)
 
         if num_players < 12:
-            # If less than 12 players, fill with dnf_row until there are 12 rows
+            # If less than 9 players, fill with dnf_row until there are 9 rows
             num_missing = 12 - num_players
             dnf_rows = pd.concat([dnf_row] * num_missing, ignore_index=True)
             features = pd.concat([features, dnf_rows], ignore_index=True)

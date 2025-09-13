@@ -91,3 +91,6 @@ MLP_IMPUTER: StandardScaler = StandardScaler()
 MLP_FEATURE_SCALER_FILE_NAME: str = "mlp_feature_scaler.pkl"
 MLP_TARGET_SCALER_FILE_NAME: str = "mlp_target_scaler.pkl"
 ######################
+
+INFERENCE_STATS: list = [f'{cat}_{stat}' for cat in TRAINING_STATS_CATEGORIES for stat in IMPORTANT_PLAYER_STATS]
+INFERENCE_DIR_NAME: str = "inference"
