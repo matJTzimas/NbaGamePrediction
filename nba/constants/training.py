@@ -34,8 +34,7 @@ DATA_TRANSFORMATION_DIR_NAME: str = "transformed"
 DATA_TRANSFORMATION_FORCE_REBUILD_CSV: bool = False
 
 IMPORTANT_PLAYER_STATS: list = ['MIN', 'FGM', 'FGA', 'FG_PCT', 'FG3M', 'FG3A', 'FG3_PCT', 'FTM',
-       'FTA', 'FT_PCT', 'OREB', 'DREB', 'REB', 'AST', 'TOV', 'STL', 'BLK',
-       'BLKA', 'PF', 'PFD', 'PTS', 'PLUS_MINUS']
+       'FTA', 'FT_PCT', 'OREB', 'DREB', 'REB', 'AST', 'TOV', 'STL', 'BLK', 'PF', 'PTS']
 
 IMPORTANT_ODDS_STATS: list = [ 'GAME_DATE', 'regular', 'HOME_ID', 'AWAY_ID', 'score_away', 'score_home', 'prob_away', 'prob_home']
 
