@@ -9,7 +9,7 @@ from nba_api.stats.endpoints import scheduleleaguev2
 from nba_api.stats.endpoints import playercareerstats
 from nba_api.stats.endpoints import boxscoresummaryv2
 
-
+from nba_api.stats.endpoints import TeamGameLogs
 from nba.logging.logger import logging
 from nba.exception.exception import NbaException
 from nba.utils.transformation_utils import add_prefix, home_away_id
@@ -36,13 +36,14 @@ class ModelInference:
         self.inference_stats_cols = self.inference_config.inference_stats
         self.imputer_scaler = load_object(file_path=self.inference_config.feature_scaler_path)
 
-        model_uri = "models:/my_cool_model/2"
+        model_uri = "models:/testing_model/1"
         self.model = mlflow.pytorch.load_model(model_uri=model_uri)
         
         self.device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
         self.model.to(self.device).eval()
         logging.info(f"Loaded model for inference.")
 
+        self.teams_df = pd.DataFrame(teams.get_teams())
 
     def games_today(self):
         """
@@ -50,7 +51,8 @@ class ModelInference:
         """
         try:
             # today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('today').strftime('%Y-%m-%d')]
-            today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2024-10-23').date()] # --- for testing ---
+            today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2024-10-30').date()] # --- for testing ---
+
             if today_games.empty:
                 logging.info("No games scheduled for today.")
                 return []
@@ -59,7 +61,8 @@ class ModelInference:
                 game_id = int(today_games.iloc[i]['gameId'])
                 home_team_id = int(today_games.iloc[i]['homeTeam_teamId'])
                 away_team_id = int(today_games.iloc[i]['awayTeam_teamId'])
-                home_away_list.append((home_team_id, away_team_id, game_id))
+                game_date = today_games.iloc[i]['gameDate']
+                home_away_list.append((home_team_id, away_team_id, game_id, game_date))
             return home_away_list
         except Exception as e:
             raise NbaException(e, sys)    
@@ -68,7 +71,7 @@ class ModelInference:
 
         winners = [] 
         for game_info in self.games_today():
-            home_team_id, away_team_id, game_id = game_info
+            home_team_id, away_team_id, game_id, game_date = game_info
             logging.info(f"Inference: Getting rosters for game {game_id} between {home_team_id} and {away_team_id}")
             home_roster = self.get_roster(home_team_id)
             away_roster = self.get_roster(away_team_id)
@@ -92,13 +95,47 @@ class ModelInference:
             home_prob = self.model(home_stats, away_stats)
 
             if home_prob.item() < 0.5:
-                winners.append([game_id, home_prob.item(), 1])
+                winners.append([game_id, game_date, home_team_id, away_team_id, home_prob.item(), "AWAY"])
             else:
-                winners.append([game_id,home_prob.item(), 0])
+                winners.append([game_id, game_date, home_team_id, away_team_id, home_prob.item(), "HOME"])
+
+        self.save_daily_predictions(winners)
+        self.update_actuals()
 
         return winners
 
-    
+    def update_actuals(self):
+
+        preds = pd.read_csv(self.inference_config.daily_csv_file)
+        game_logs = TeamGameLogs(season_nullable="2024-25",league_id_nullable='00').get_data_frames()[0]
+        game_logs['GAME_DATE'] = pd.to_datetime(game_logs['GAME_DATE']).dt.date
+
+        game_logs = game_logs[game_logs['MATCHUP'].str.contains(" vs. ", na=False)].reset_index(drop=True)
+        game_logs['GAME_ID'] = game_logs['GAME_ID'].astype(int)
+
+        for  i in range(len(preds)):
+            has_result = True if preds.loc[i, "ACTUAL"] != "-" else False
+            if has_result:
+                print('Skipping, already has result')
+                continue
+            game_id = preds.loc[i,'GAME_ID']
+            current_log = game_logs[game_logs['GAME_ID'] == game_id]
+
+            if not current_log.empty:
+                home_result = current_log['WL'].item()
+                if home_result == 'W':
+                    preds.loc[i,'ACTUAL'] = "HOME"
+                elif home_result == 'L':
+                    preds.loc[i,'ACTUAL'] = "AWAY"
+
+            if preds.loc[i, 'ACTUAL'] == preds.loc[i,'WINNER PRED']:
+                preds.loc[i,'RESULT'] = True
+            else:
+                preds.loc[i,'RESULT'] = False
+
+        preds.to_csv(self.inference_config.daily_csv_file, index=False)
+
+
     def sort_and_pad_roster(self, roster_df):
         """
         Sorts the roster by ALL_PTS descending, keeps top 12, and pads with zero rows if less than 12.
@@ -113,6 +150,32 @@ class ModelInference:
         else:
             sorted_roster = sorted_roster.iloc[:12].reset_index(drop=True)
         return sorted_roster
+
+    def save_daily_predictions(self, winners):
+        """
+        Saves the daily predictions to a CSV file.
+        """
+        try:
+            if not winners:
+                logging.info("No games today to save predictions for.")
+                return
+
+            df_winners = pd.DataFrame(winners, columns=['GAME_ID','GAME_DATE', 'HOME_ID', 'AWAY_ID', 'PROB_HOME_WIN', 'WINNER PRED'])
+            df_winners['GAME_ID'] = df_winners['GAME_ID'].astype(int)
+            df_winners['PROB_AWAY_WIN'] = 1 - df_winners['PROB_HOME_WIN']
+            df_winners['HOME_ABBR'] = df_winners['HOME_ID'].map(self.teams_df.set_index('id')['abbreviation'])
+            df_winners['AWAY_ABBR'] = df_winners['AWAY_ID'].map(self.teams_df.set_index('id')['abbreviation'])
+            df_winners['ACTUAL'] = ["-" for _ in range(len(df_winners))]
+            df_winners['RESULT'] = ["-" for _ in range(len(df_winners))]
+            df_winners = df_winners[['GAME_ID','GAME_DATE', 'HOME_ID', 'HOME_ABBR', 'AWAY_ID', 'AWAY_ABBR', 'PROB_HOME_WIN', 'PROB_AWAY_WIN', 'WINNER PRED', 'ACTUAL', 'RESULT']]
+
+            if os.path.exists(self.inference_config.daily_csv_file) and os.path.getsize(self.inference_config.daily_csv_file) > 0:
+                existing_df = pd.read_csv(self.inference_config.daily_csv_file)
+                df_winners = pd.concat([existing_df, df_winners], ignore_index=True)
+            df_winners.to_csv(self.inference_config.daily_csv_file, index=False)
+
+        except Exception as e:
+            raise NbaException(e, sys)
 
     def safe_players_stats(self, roster, important_stats):
         players_stats = []
@@ -159,7 +222,7 @@ class ModelInference:
         """
 
         # Gentle pause helps avoid throttling if calling repeatedly
-        time.sleep(0.9)
+        time.sleep(0.4)
         pcs = playercareerstats.PlayerCareerStats(
             player_id=player_id,
             per_mode36="PerGame",   # or 'Per36', 'Totals'

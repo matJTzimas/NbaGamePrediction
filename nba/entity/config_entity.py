@@ -90,9 +90,11 @@ class InferenceConfig:
         self.inference_dir = os.path.join(training.ARTIFACT_DIR, training.INFERENCE_DIR_NAME)
         os.makedirs(self.inference_dir, exist_ok=True)
         self.important_player_stats = training.IMPORTANT_PLAYER_STATS
+        self.daily_csv_file = os.path.join(self.inference_dir, f"predictions.csv")
 
         if model_name == "mlp":
             model_config = MLPConfig()
+
 
         self.model_path = model_config.model_path
         self.feature_scaler_path = model_config.feature_scaler_path
