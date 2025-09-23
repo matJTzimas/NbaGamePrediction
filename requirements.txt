@@ -17,3 +17,5 @@ scikit-learn
 optuna
 python-dotenv
 streamlit
+s3fs
+-e .

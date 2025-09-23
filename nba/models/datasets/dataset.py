@@ -5,7 +5,7 @@ from nba.entity.config_entity import MLPConfig
 from nba.utils.main_utils import *
 from nba.entity.artifact_entity import DataTransformationArtifact
 from sklearn.preprocessing import StandardScaler
-
+from nba.utils.main_utils import Storage
 
 class NBADataset(Dataset):
     def __init__(self, mlp_config: MLPConfig, data_transformation_artifact: DataTransformationArtifact, split: str = "train"):
@@ -31,6 +31,7 @@ class NBADataset(Dataset):
         zero_row['GAME_ID'] = -1
         self.data = pd.concat([self.data, pd.DataFrame([zero_row])], ignore_index=True)
 
+        self.storage = Storage(cloud_option=self.mlp_config.cloud_option)
 
         if self.split == "train":
             self.imputer_model = StandardScaler()
@@ -51,12 +52,12 @@ class NBADataset(Dataset):
                 index=self.data.index
             )
 
-            save_object(file_path=self.mlp_config.feature_scaler_path, obj=model_feature_scaler)
-            save_object(file_path=self.mlp_config.target_scaler_path, obj=target_feature_scaler)
+            self.storage.save_object(file_path=self.mlp_config.feature_scaler_path, obj=model_feature_scaler)
+            self.storage.save_object(file_path=self.mlp_config.target_scaler_path, obj=target_feature_scaler)
             
         else:
-            model_feature_scaler = load_object(file_path=self.mlp_config.feature_scaler_path)
-            target_feature_scaler = load_object(file_path=self.mlp_config.target_scaler_path)
+            model_feature_scaler = self.storage.load_object(file_path=self.mlp_config.feature_scaler_path)
+            target_feature_scaler = self.storage.load_object(file_path=self.mlp_config.target_scaler_path)
 
             self.data[self.model_features] = model_feature_scaler.transform(self.data[self.model_features])
             self.data[self.auxiliary_target_features] = target_feature_scaler.transform(self.data[self.auxiliary_target_features])

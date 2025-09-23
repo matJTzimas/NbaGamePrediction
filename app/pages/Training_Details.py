@@ -10,6 +10,15 @@ mlflow.set_tracking_uri("https://dagshub.com/matJTzimas/NbaGamePrediction.mlflow
 import matplotlib.pyplot as plt
 import pickle
 
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+    
+from nba.utils.main_utils import Storage
+from nba.entity.config_entity import InferenceConfig
+inference_config = InferenceConfig(model_name="mlp")
+storage = Storage(cloud_option=inference_config.cloud_option)
+
 st.sidebar.title("📂 Navigation")
 if st.sidebar.button("🏀 Predictions"):
     st.switch_page("Predictions.py")

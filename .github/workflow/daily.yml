@@ -1,35 +1,36 @@
-name: Daily Nba Game Prediction Workflow
+name: Daily NBA Game Prediction
 
 on:
   schedule:
+    # Every day at 07:10 UTC
     - cron: '10 7 * * *'
-  workflow_dispatch:{}
+  workflow_dispatch: {}
 
-permissions:
-  contents: write
-
-jobs: 
+jobs:
   run-daily:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0   # needed so we can commit and push
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install dependecies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Export secrets
-      
-
-
-        
+      - name: Run inference
+        env:
+          # Inline envs
+          MLFLOW_TRACKING_URI: "https://dagshub.com/matJTzimas/NbaGamePrediction.mlflow"
+          MLFLOW_TRACKING_USERNAME: "matJTzimas"
+          # Secrets (set in repo → Settings → Secrets → Actions)
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+          DAGSHUB_USER_TOKEN: ${{ secrets.DAGSHUB_USER_TOKEN }}
+        run: |
+          python inference.py

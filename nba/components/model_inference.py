@@ -21,6 +21,7 @@ import mlflow
 mlflow.set_tracking_uri("https://dagshub.com/matJTzimas/NbaGamePrediction.mlflow")
 import torch
 import torch.nn as nn
+from nba.utils.main_utils import Storage
 
 
 class ModelInference:
@@ -28,12 +29,15 @@ class ModelInference:
         self.model = None
         self.inference_config = InferenceConfig(model_name="mlp")
 
+        self.storage = Storage(cloud_option=self.inference_config.cloud_option)
+
         scheduled_games = scheduleleaguev2.ScheduleLeagueV2(league_id="00", season="2024", timeout=30).get_data_frames()[0]
         scheduled_games = scheduled_games.loc[scheduled_games['gameLabel']=='',:]
         self.scheduled_games = scheduled_games[['gameDate', 'gameId', 'homeTeam_teamId', 'homeTeam_teamTricode', 'awayTeam_teamId', 'awayTeam_teamTricode']]
         self.scheduled_games.loc[:, 'gameDate'] = pd.to_datetime(self.scheduled_games['gameDate']).dt.date
 
         self.inference_stats_cols = self.inference_config.inference_stats
+        
         self.imputer_scaler = load_object(file_path=self.inference_config.feature_scaler_path)
 
         model_uri = "models:/testing_model/1"
@@ -106,7 +110,8 @@ class ModelInference:
 
     def update_actuals(self):
 
-        preds = pd.read_csv(self.inference_config.daily_csv_file)
+
+        preds = self.storage.read_csv()
         game_logs = TeamGameLogs(season_nullable="2024-25",league_id_nullable='00').get_data_frames()[0]
         game_logs['GAME_DATE'] = pd.to_datetime(game_logs['GAME_DATE']).dt.date
 
@@ -133,8 +138,8 @@ class ModelInference:
             else:
                 preds.loc[i,'RESULT'] = False
 
-        preds.to_csv(self.inference_config.daily_csv_file, index=False)
-
+        # preds.to_csv(self.inference_config.daily_csv_file, index=False)
+        self.storage.to_csv(preds)
 
     def sort_and_pad_roster(self, roster_df):
         """
@@ -169,10 +174,16 @@ class ModelInference:
             df_winners['RESULT'] = ["-" for _ in range(len(df_winners))]
             df_winners = df_winners[['GAME_ID','GAME_DATE', 'HOME_ID', 'HOME_ABBR', 'AWAY_ID', 'AWAY_ABBR', 'PROB_HOME_WIN', 'PROB_AWAY_WIN', 'WINNER PRED', 'ACTUAL', 'RESULT']]
 
-            if os.path.exists(self.inference_config.daily_csv_file) and os.path.getsize(self.inference_config.daily_csv_file) > 0:
-                existing_df = pd.read_csv(self.inference_config.daily_csv_file)
+            # if os.path.exists(self.inference_config.daily_csv_file) and os.path.getsize(self.inference_config.daily_csv_file) > 0:
+            #     existing_df = pd.read_csv(self.inference_config.daily_csv_file)
+            #     df_winners = pd.concat([existing_df, df_winners], ignore_index=True)
+
+            existing_df = self.storage.read_csv()
+            if existing_df is not None:
                 df_winners = pd.concat([existing_df, df_winners], ignore_index=True)
-            df_winners.to_csv(self.inference_config.daily_csv_file, index=False)
+
+            self.storage.to_csv(df_winners)
+
 
         except Exception as e:
             raise NbaException(e, sys)

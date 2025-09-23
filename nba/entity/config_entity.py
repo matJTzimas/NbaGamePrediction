@@ -81,7 +81,7 @@ class MLPConfig:
         self.model_path = os.path.join(self.mlp_dir, self.model_name)
 
         self.mlp_imputer = training.MLP_IMPUTER
-
+        self.cloud_option = training.CLOUD_OPTION
         self.feature_scaler_path = os.path.join(self.mlp_dir, training.MLP_FEATURE_SCALER_FILE_NAME)
         self.target_scaler_path = os.path.join(self.mlp_dir, training.MLP_TARGET_SCALER_FILE_NAME)
 
@@ -99,7 +99,7 @@ class InferenceConfig:
         self.model_path = model_config.model_path
         self.feature_scaler_path = model_config.feature_scaler_path
         self.inference_stats = training.INFERENCE_STATS
-
+        self.cloud_option = training.CLOUD_OPTION
 
 
 

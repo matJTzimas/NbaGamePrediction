@@ -1,72 +1,169 @@
+from __future__ import annotations
+
+import os
+import sys
+from datetime import date, datetime
+from typing import Optional
+
 import pandas as pd
 import streamlit as st
-from datetime import datetime, date
-from zoneinfo import ZoneInfo   # Python 3.9+
+from dotenv import load_dotenv
+from zoneinfo import ZoneInfo  # Py ≥3.9
 
-st.set_page_config(page_title="NBA Predictions", page_icon="🏀", layout="wide")
+# --- Repo imports (clean + robust) ---
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
-st.title("🏀 NBA Predictions — Today's Games")
-st.caption("Predicting Today's Games Using ML Model. You can find implementation details in 'Documentation' page, while training informaiton \
-    are available at 'Training Details' page.")
+from nba.utils.main_utils import Storage
+from nba.entity.config_entity import InferenceConfig
 
+# --- Config / Constants ---
+APP_TZ = "Europe/Athens"
+PAGE_TITLE = "NBA Predictions"
+PAGE_ICON = "🏀"
+CACHE_TTL_SEC = 60  # tweak to your refresh cadence
 
-st.sidebar.title("📂 Navigation")
-if st.sidebar.button("🏀 Predictions"):
-    st.switch_page("Predictions.py")
-if st.sidebar.button("📊 Training Details"):
-    st.switch_page("pages/Training_Details.py")
-if st.sidebar.button("📚 Documentation"):
-    st.switch_page("pages/Documentation.py")
+load_dotenv()
+st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="wide")
 
+# --- Header / Nav ---
+st.title(f"{PAGE_ICON} {PAGE_TITLE} — Today’s Games")
+st.caption(
+    "Predicting today's games with ML. "
+    "Implementation details in **Documentation**; training info in **Training Details**."
+)
 
-CSV_PATH = "Artifacts/inference/predictions.csv"
+with st.sidebar:
+    st.title("📂 Navigation")
+    # Prefer page links (Streamlit multipage apps)
+    st.page_link("Predictions.py", label="🏀 Predictions")
+    st.page_link("pages/Training_Details.py", label="📊 Training Details")
+    st.page_link("pages/Documentation.py", label="📚 Documentation")
 
-# 1) Load data (cached for speed)
-@st.cache_data
-def load_data(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path)
-    df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"]).dt.date.astype(str)
+    st.markdown("---")
+    use_test_date = st.checkbox("Use test date", value=False)
+    test_date_str = st.text_input("Test date (YYYY-MM-DD)", value="2024-10-30")
+    st.caption("Uncheck to use current Athens date.")
+
+# --- Inference config / storage ---
+inference_config = InferenceConfig(model_name="mlp")
+storage = Storage(cloud_option=inference_config.cloud_option)
+
+# --- Data loaders ---
+@st.cache_data(ttl=CACHE_TTL_SEC)
+def load_data(_storage: Storage) -> Optional[pd.DataFrame]:
+    """Load the full predictions table. Returns None if not available."""
+    df = _storage.read_csv()
+    if df is None or df.empty:
+        return None
+    # normalize schema
+    if "GAME_DATE" in df.columns:
+        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce").dt.date.astype(str)
+    # derive winner abbrev column
+    if {"HOME_ABBR", "AWAY_ABBR", "WINNER PRED"}.issubset(df.columns):
+        df["WINNER PRED ABBS"] = df.apply(
+            lambda r: r["HOME_ABBR"] if r["WINNER PRED"] == "HOME" else r["AWAY_ABBR"],
+            axis=1,
+        )
     return df
 
-df = load_data(CSV_PATH)
-df['WINNER PRED ABBS'] = df.apply(lambda row : row['HOME_ABBR'] if row['WINNER PRED'] == 'HOME' else row['AWAY_ABBR'], axis=1)
 
-# 2) Choose what “today” means
-today_athens = datetime.now(ZoneInfo("Europe/Athens")).date()
-today_str = today_athens.isoformat()
-today_str = "2024-10-30"  # For testing purposes, comment out for production
+def resolve_today_str() -> str:
+    if use_test_date:
+        try:
+            # Validate test date
+            _ = datetime.strptime(test_date_str, "%Y-%m-%d").date()
+            return test_date_str
+        except ValueError:
+            st.warning("Invalid test date. Falling back to current Athens date.")
+    return datetime.now(ZoneInfo(APP_TZ)).date().isoformat()
 
-st.caption(f"Showing games for: **{today_str}** (Europe/Athens)")
 
+def fmt_percent(x: float | int | None) -> str:
+    try:
+        return f"{float(x)*100:.2f}%"
+    except Exception:
+        return "-"
 
-# 3) Filter to today's games
-# today_df = df[df["GAME_DATE"] == today_str].copy()
-today_df = df[df["GAME_DATE"] == today_str].copy()
+# --- Load data ---
+df = load_data(storage)
 
-if today_df.empty:
-    st.markdown("<h3 style='color: red;'>No games scheduled for today.</h3>", unsafe_allow_html=True)
-else: 
-    st.caption(f"Found **{len(today_df)}** games scheduled for today.")
-    # 5) Table
-    display_cols = ['GAME_DATE', 'HOME_ABBR', 'PROB_HOME_WIN', 'AWAY_ABBR', 'PROB_AWAY_WIN', 'WINNER PRED ABBS']
-    st.dataframe(
-        today_df[display_cols].sort_values(by=display_cols[0]),  # simple stable sort
-        use_container_width=True,
-    )
+if df is None or df.empty:
+    st.error("No predictions available yet. Please check back later or verify your pipeline.")
+    st.stop()
 
-st.title("Previous Games With Results")
+# --- Today's view ---
+today_str = resolve_today_str()
+st.caption(f"Showing games for: **{today_str}** ({APP_TZ})")
 
-previous_df = df[df["GAME_DATE"] < today_str].copy()
-accuracy = previous_df['RESULT'].mean() * 100
-st.markdown(f"<h3 style='color: white;'> Model accuracy on previous games: {accuracy:.2f}% </h3>", unsafe_allow_html=True)
-# st.markdown(f"<h3 style='color: white;'>{len(previous_df)} previous games found with accu</h3>", unsafe_allow_html=True)
-previous_df['RESULT'] = previous_df['RESULT'].map({True: "✅" , False: "❌" })
-if previous_df.empty:
-    st.markdown("<h3 style='color: red;'>No previous games found.</h3>", unsafe_allow_html=True)
+required_cols_today = {"GAME_DATE", "HOME_ABBR", "PROB_HOME_WIN", "AWAY_ABBR", "PROB_AWAY_WIN", "WINNER PRED ABBS"}
+missing_today = required_cols_today - set(df.columns)
+if missing_today:
+    st.error(f"Missing columns for today's view: {', '.join(sorted(missing_today))}")
 else:
-    display_cols = ['GAME_DATE', 'HOME_ABBR', 'PROB_HOME_WIN', 'AWAY_ABBR', 'PROB_AWAY_WIN', 'WINNER PRED ABBS','ACTUAL','RESULT']
-    st.dataframe(
-        previous_df[display_cols].sort_values(by=display_cols[0], ascending=False).style.set_properties(**{"text-align": "center"}),  # simple stable sort
-        use_container_width=True,
-    )
+    today_df = df.loc[df["GAME_DATE"] == today_str, list(required_cols_today)].copy()
+    if today_df.empty:
+        st.info("No games scheduled for today.")
+    else:
+        st.caption(f"Found **{len(today_df)}** game(s) scheduled for today.")
+        # Nicely formatted dataframe (percentages)
+        try:
+            st.dataframe(
+                today_df.sort_values("GAME_DATE"),
+                width='stretch',
+                column_config={
+                    "PROB_HOME_WIN": st.column_config.NumberColumn("PROB_HOME_WIN", format="%.2f%%"),
+                    "PROB_AWAY_WIN": st.column_config.NumberColumn("PROB_AWAY_WIN", format="%.2f%%"),
+                },
+            )
+        except Exception:
+            # Fallback for older Streamlit versions
+            show_df = today_df.copy()
+            show_df["PROB_HOME_WIN"] = show_df["PROB_HOME_WIN"].map(fmt_percent)
+            show_df["PROB_AWAY_WIN"] = show_df["PROB_AWAY_WIN"].map(fmt_percent)
+            st.dataframe(show_df.sort_values("GAME_DATE"), width='stretch')
 
+# --- Previous games with results ---
+st.subheader("Previous Games With Results")
+
+if "GAME_DATE" not in df.columns or "RESULT" not in df.columns:
+    st.info("Historical result columns not found.")
+else:
+    previous_df = df.loc[df["GAME_DATE"] < today_str].copy()
+    if previous_df.empty:
+        st.info("No previous games found.")
+    else:
+        # Accuracy
+        try:
+            accuracy = float(previous_df["RESULT"].mean()) * 100.0
+            st.markdown(f"**Model accuracy on previous games:** {accuracy:.2f}%")
+        except Exception:
+            st.markdown("**Model accuracy on previous games:** n/a")
+
+        # Pretty result glyphs
+        previous_df["RESULT"] = previous_df["RESULT"].map({True: "✅", False: "❌"}).fillna("-")
+
+        prev_cols = [
+            col for col in [
+                "GAME_DATE", "HOME_ABBR", "PROB_HOME_WIN",
+                "AWAY_ABBR", "PROB_AWAY_WIN", "WINNER PRED ABBS",
+                "ACTUAL", "RESULT"
+            ] if col in previous_df.columns
+        ]
+
+        try:
+            st.dataframe(
+                previous_df[prev_cols].sort_values("GAME_DATE", ascending=False),
+                width='stretch',
+                column_config={
+                    "PROB_HOME_WIN": st.column_config.NumberColumn("PROB_HOME_WIN", format="%.2f%%"),
+                    "PROB_AWAY_WIN": st.column_config.NumberColumn("PROB_AWAY_WIN", format="%.2f%%"),
+                },
+            )
+        except Exception:
+            show_prev = previous_df[prev_cols].copy()
+            for c in ("PROB_HOME_WIN", "PROB_AWAY_WIN"):
+                if c in show_prev.columns:
+                    show_prev[c] = show_prev[c].map(fmt_percent)
+            st.dataframe(show_prev.sort_values("GAME_DATE", ascending=False), width='stretch')

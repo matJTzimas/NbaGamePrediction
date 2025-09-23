@@ -18,7 +18,7 @@ from nba.utils.ml_utils import train_one_epoch_mlp, evaluate_mlp
 import optuna, mlflow, mlflow.pytorch
 import dagshub
 from dotenv import load_dotenv
-load_dotenv()  # this reads .env and puts vars into os.environ 
+load_dotenv()  # this reads .env and puts vars into os.environ
 mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
 
 
