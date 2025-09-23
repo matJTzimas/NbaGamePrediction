@@ -31,7 +31,7 @@ class ModelInference:
 
         self.storage = Storage(cloud_option=self.inference_config.cloud_option)
 
-        scheduled_games = scheduleleaguev2.ScheduleLeagueV2(league_id="00", season="2024", timeout=30).get_data_frames()[0]
+        scheduled_games = scheduleleaguev2.ScheduleLeagueV2(league_id="00", season="2024", timeout=240).get_data_frames()[0]
         scheduled_games = scheduled_games.loc[scheduled_games['gameLabel']=='',:]
         self.scheduled_games = scheduled_games[['gameDate', 'gameId', 'homeTeam_teamId', 'homeTeam_teamTricode', 'awayTeam_teamId', 'awayTeam_teamTricode']]
         self.scheduled_games.loc[:, 'gameDate'] = pd.to_datetime(self.scheduled_games['gameDate']).dt.date
@@ -227,7 +227,7 @@ class ModelInference:
         return roster_df
 
     @staticmethod
-    def get_player_stats(player_id: int, important_stats: list, timeout: int = 60):
+    def get_player_stats(player_id: int, important_stats: list, timeout: int = 240):
         """
         Returns a dict of DataFrames for the player's career:
         """
