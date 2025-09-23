@@ -55,7 +55,7 @@ class ModelInference:
         """
         try:
             # today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('today').strftime('%Y-%m-%d')]
-            today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2024-10-30').date()] # --- for testing ---
+            today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2024-10-31').date()] # --- for testing ---
 
             if today_games.empty:
                 logging.info("No games scheduled for today.")
