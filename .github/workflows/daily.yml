@@ -3,7 +3,7 @@ name: Daily Nba Game Prediction Workflow
 on:
   schedule:
     - cron: '10 7 * * *'
-  workflow_dispatch:{}
+  workflow_dispatch: {}
 
 permissions:
   contents: write
