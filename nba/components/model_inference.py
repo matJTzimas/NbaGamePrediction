@@ -44,6 +44,34 @@ def fetch_schedule(season="2024", max_attempts=6, per_req_timeout=20):
             delay = min(delay * 2, 60)
 
 
+def fetch_schedule_cdn():
+    urls = [
+        "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json",
+        "https://data.nba.com/data/10s/prod/v1/calendar.json",
+    ]
+    s = requests.Session()
+    s.headers.update({"User-Agent": "Mozilla/5.0", "Referer": "https://www.nba.com"})
+    for u in urls:
+        try:
+            r = s.get(u, timeout=15); r.raise_for_status()
+            data = r.json()
+            games = data["leagueSchedule"]["gameDates"]
+            rows = []
+            for day in games:
+                for g in day.get("games", []):
+                    rows.append({
+                        "gameId": g.get("gameId"),
+                        "gameDate": day["gameDate"],
+                        "home": g["homeTeam"]["teamTricode"],
+                        "away": g["awayTeam"]["teamTricode"],
+                        "status": g.get("gameStatus"),
+                    })
+            return pd.DataFrame(rows)
+        except Exception as e:
+            print(f"[cdn fallback] {u} failed: {e}")
+    raise RuntimeError("All schedule sources failed")
+
+
 class ModelInference:
     def __init__(self):
         self.model = None
@@ -52,7 +80,13 @@ class ModelInference:
         self.storage = Storage(cloud_option=self.inference_config.cloud_option)
 
         # scheduled_games = scheduleleaguev2.ScheduleLeagueV2(league_id="00", season="2024", timeout=240).get_data_frames()[0]
-        scheduled_games = fetch_schedule(season="2024", max_attempts=6, per_req_timeout=30)
+
+        try: 
+            scheduled_games = fetch_schedule(season="2024", max_attempts=6, per_req_timeout=30)
+        except Exception:
+            scheduled_games = fetch_schedule_cdn()
+
+        
         scheduled_games = scheduled_games.loc[scheduled_games['gameLabel']=='',:]
         self.scheduled_games = scheduled_games[['gameDate', 'gameId', 'homeTeam_teamId', 'homeTeam_teamTricode', 'awayTeam_teamId', 'awayTeam_teamTricode']]
         self.scheduled_games.loc[:, 'gameDate'] = pd.to_datetime(self.scheduled_games['gameDate']).dt.date
