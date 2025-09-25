@@ -10,7 +10,7 @@ permissions:
 
 jobs: 
   run-daily:
-    runs-on: self-hosted
+    runs-on: [self-hosted, macOS, ARM64, nbarunner]
 
     steps:
       - name: Checkout repository
