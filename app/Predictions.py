@@ -144,17 +144,35 @@ else:
         # Pretty result glyphs
         previous_df["RESULT"] = previous_df["RESULT"].map({True: "✅", False: "❌"}).fillna("-")
 
+        # Highlight winning team/prob columns based on ACTUAL
+        def highlight_actual(row):
+            styles = [''] * len(row)
+            if row["PROB_HOME_WIN"] > row["PROB_AWAY_WIN"]:
+                for i, c in enumerate(row.index):
+                    if c in ("HOME_ABBR", "PROB_HOME_WIN"):
+                        styles[i] = "background-color: #6A0DAD"  # dark purple
+            elif row["PROB_AWAY_WIN"] > row["PROB_HOME_WIN"]:
+                for i, c in enumerate(row.index):
+                        if c in ("AWAY_ABBR", "PROB_AWAY_WIN"):
+                            styles[i] = "background-color: #6A0DAD"
+            return styles
+
+        # Only apply style if using pandas Styler (Streamlit >=1.32)
         prev_cols = [
             col for col in [
                 "GAME_DATE", "HOME_ABBR", "PROB_HOME_WIN",
-                "AWAY_ABBR", "PROB_AWAY_WIN", "WINNER PRED ABBS",
-                "ACTUAL", "RESULT"
-            ] if col in previous_df.columns
+                "AWAY_ABBR", "PROB_AWAY_WIN", "RESULT"
+                ] if col in previous_df.columns
         ]
+
+        ordered = previous_df[prev_cols].sort_values("GAME_DATE", ascending=False)
+
+        styled_prev = ordered.style.apply(highlight_actual, axis=1)
+        # styled_prev = styled_prev[prev_cols]
 
         try:
             st.dataframe(
-                previous_df[prev_cols].sort_values("GAME_DATE", ascending=False),
+                styled_prev,
                 width='stretch',
                 column_config={
                     "PROB_HOME_WIN": st.column_config.NumberColumn("PROB_HOME_WIN", format="%.2f%%"),
@@ -167,3 +185,20 @@ else:
                 if c in show_prev.columns:
                     show_prev[c] = show_prev[c].map(fmt_percent)
             st.dataframe(show_prev.sort_values("GAME_DATE", ascending=False), width='stretch')
+
+
+        # try:
+        #     st.dataframe(
+        #         previous_df[prev_cols].sort_values("GAME_DATE", ascending=False),
+        #         width='stretch',
+        #         column_config={
+        #             "PROB_HOME_WIN": st.column_config.NumberColumn("PROB_HOME_WIN", format="%.2f%%"),
+        #             "PROB_AWAY_WIN": st.column_config.NumberColumn("PROB_AWAY_WIN", format="%.2f%%"),
+        #         },
+        #     )
+        # except Exception:
+        #     show_prev = previous_df[prev_cols].copy()
+        #     for c in ("PROB_HOME_WIN", "PROB_AWAY_WIN"):
+        #         if c in show_prev.columns:
+        #             show_prev[c] = show_prev[c].map(fmt_percent)
+        #     st.dataframe(show_prev.sort_values("GAME_DATE", ascending=False), width='stretch')
