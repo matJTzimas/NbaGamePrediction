@@ -36,9 +36,10 @@ class ModelTrainer:
     def nba_mlp_objective(self, trial):
             logging.info("Starting NBA MLP training with mlflow and optuna")
 
-            lr         = trial.suggest_float("lr", 1e-4, 1e-3, log=True)
+            lr         = trial.suggest_float("lr", 5e-4, 5e-2, log=True)
             batch_size = trial.suggest_categorical("batch_size", [32, 64])
-            weight_decay = trial.suggest_float("weight_decay", 1e-5, 1e-3, log=True)
+            weight_decay = trial.suggest_float("weight_decay", 1e-5, 1e-4, log=True)
+
 
             logging.info(f"Trial {trial.number}: lr={lr}, batch_size={batch_size}")
             with mlflow.start_run(nested=True, run_name=f"mlp_nba_{trial.number}_{datetime.now().strftime('%Y%m%d')}"):
@@ -60,6 +61,10 @@ class ModelTrainer:
 
                 optimizer = torch.optim.Adam(self.model.parameters(), lr=lr, weight_decay=weight_decay)
                 best_val_acc = 0.0
+                no_improvement_count = 0
+                patience = 5
+                min_delta = 0.001
+
                 for epoch in range(1, self.mlp_config.mlp_num_epochs+1):
 
                     train_loss = train_one_epoch_mlp(self.model, train_loader, optimizer, device)
@@ -76,14 +81,21 @@ class ModelTrainer:
 
                     logging.info(f"Trial {trial.number} Epoch {epoch}: Train Loss: {train_loss:.4f}, Val Acc: {val_acc:.4f}")
 
-                    if val_acc > best_val_acc:
+                    if val_acc > best_val_acc+min_delta:
                         best_val_acc = val_acc
+                        no_improvement_count = 0
+                    else:
+                        no_improvement_count += 1
 
                     # After the loop ends (trial done):
                     if val_acc > self.global_best_val_acc:
                         self.global_best_val_acc = val_acc
                         self.global_best_model_state = self.model.state_dict()
                         self.best_val_stats = val_acc_stats
+                    
+                    if no_improvement_count >= patience:
+                        logging.info(f"Early stopping at epoch {epoch} for trial {trial.number}")
+                        break
 
                 mlflow.log_metric("best_val_acc", best_val_acc)
                 return best_val_acc

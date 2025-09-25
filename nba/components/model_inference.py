@@ -95,7 +95,7 @@ class ModelInference:
         
         self.imputer_scaler = load_object(file_path=self.inference_config.feature_scaler_path)
 
-        model_uri = "models:/testing_model/1"
+        model_uri = "models:/testing_model/5"
         self.model = mlflow.pytorch.load_model(model_uri=model_uri)
         
         self.device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
@@ -111,7 +111,7 @@ class ModelInference:
         """
         try:
             # today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('today').strftime('%Y-%m-%d')]
-            today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2024-10-25').date()] # --- for testing ---
+            today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2024-10-30').date()] # --- for testing ---
 
             if today_games.empty:
                 logging.info("No games scheduled for today.")

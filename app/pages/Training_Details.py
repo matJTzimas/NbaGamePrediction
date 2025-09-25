@@ -45,6 +45,8 @@ df = mlflow.search_runs(
 
 df = df[df['tags.mlflow.runName'].str.contains('mlp_nba', na=False)]
 runname = list(df['tags.mlflow.runName'])
+runname =[run_exp for run_exp in runname if run_exp != "mlp_nba_main_run"]
+
 days_training = [int(run_exp.split('_')[-1]) for run_exp in runname]
 last_day = str(max(days_training))
 
