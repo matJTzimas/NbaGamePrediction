@@ -125,9 +125,12 @@ else:
                 fig, ax = plt.subplots(figsize=(6, 4))
                 series = histories.get(metric, [])
                 any_plotted = False
+
                 for run_name, steps, values in series:
                     if steps and values:
-                        ax.plot(steps, values, label=run_name)
+                        sorted_pairs = sorted(zip(steps, values), key=lambda x: x[0])
+                        sorted_steps, sorted_values = zip(*sorted_pairs) if sorted_pairs else ([], [])
+                        ax.plot(sorted_steps, sorted_values, label=run_name)
                         any_plotted = True
 
                 ax.set_xlabel("Epoch")
