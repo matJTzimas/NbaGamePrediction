@@ -187,18 +187,3 @@ else:
             st.dataframe(show_prev.sort_values("GAME_DATE", ascending=False), width='stretch')
 
 
-        # try:
-        #     st.dataframe(
-        #         previous_df[prev_cols].sort_values("GAME_DATE", ascending=False),
-        #         width='stretch',
-        #         column_config={
-        #             "PROB_HOME_WIN": st.column_config.NumberColumn("PROB_HOME_WIN", format="%.2f%%"),
-        #             "PROB_AWAY_WIN": st.column_config.NumberColumn("PROB_AWAY_WIN", format="%.2f%%"),
-        #         },
-        #     )
-        # except Exception:
-        #     show_prev = previous_df[prev_cols].copy()
-        #     for c in ("PROB_HOME_WIN", "PROB_AWAY_WIN"):
-        #         if c in show_prev.columns:
-        #             show_prev[c] = show_prev[c].map(fmt_percent)
-        #     st.dataframe(show_prev.sort_values("GAME_DATE", ascending=False), width='stretch')

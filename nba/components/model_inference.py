@@ -27,7 +27,7 @@ import time, random
 from requests.exceptions import ReadTimeout, ConnectionError
 from nba_api.stats.endpoints import scheduleleaguev2
 
-def fetch_schedule(season="2024", max_attempts=6, per_req_timeout=20):
+def fetch_schedule(season="2025", max_attempts=6, per_req_timeout=20):
     delay = 2
     for attempt in range(1, max_attempts + 1):
         try:
@@ -82,7 +82,7 @@ class ModelInference:
         # scheduled_games = scheduleleaguev2.ScheduleLeagueV2(league_id="00", season="2024", timeout=240).get_data_frames()[0]
 
         try: 
-            scheduled_games = fetch_schedule(season="2024", max_attempts=6, per_req_timeout=30)
+            scheduled_games = fetch_schedule(season="2025", max_attempts=6, per_req_timeout=30)
         except Exception:
             scheduled_games = fetch_schedule_cdn()
 
@@ -110,8 +110,8 @@ class ModelInference:
             return a [N,2] list of tuples with [home_team_id, away_team_id]
         """
         try:
-            # today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('today').strftime('%Y-%m-%d')]
-            today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2024-10-30').date()] # --- for testing ---
+            today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('today').strftime('%Y-%m-%d')]
+            # today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2024-10-30').date()] # --- for testing ---
 
             if today_games.empty:
                 logging.info("No games scheduled for today.")
@@ -168,7 +168,7 @@ class ModelInference:
 
 
         preds = self.storage.read_csv()
-        game_logs = TeamGameLogs(season_nullable="2024-25",league_id_nullable='00').get_data_frames()[0]
+        game_logs = TeamGameLogs(season_nullable="2025-26",league_id_nullable='00').get_data_frames()[0]
         game_logs['GAME_DATE'] = pd.to_datetime(game_logs['GAME_DATE']).dt.date
 
         game_logs = game_logs[game_logs['MATCHUP'].str.contains(" vs. ", na=False)].reset_index(drop=True)
