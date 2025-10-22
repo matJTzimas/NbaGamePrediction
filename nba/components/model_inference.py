@@ -168,6 +168,9 @@ class ModelInference:
 
 
         preds = self.storage.read_csv()
+        if preds is None or preds.empty:
+            logging.info("No predictions to update actuals for.")
+            return
         game_logs = TeamGameLogs(season_nullable="2025-26",league_id_nullable='00').get_data_frames()[0]
         game_logs['GAME_DATE'] = pd.to_datetime(game_logs['GAME_DATE']).dt.date
 
