@@ -110,9 +110,9 @@ class ModelInference:
             return a [N,2] list of tuples with [home_team_id, away_team_id]
         """
         try:
-            today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('today').strftime('%Y-%m-%d')]
-            # today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2024-10-30').date()] # --- for testing ---
-
+            today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('today').strftime('%Y-%m-%d').date()]
+            # today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2025-10-21').date()] # --- for testing ---
+            print(today_games)
             if today_games.empty:
                 logging.info("No games scheduled for today.")
                 return []
