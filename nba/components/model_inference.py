@@ -111,7 +111,7 @@ class ModelInference:
         """
         try:
 
-            next_day = (pd.to_datetime('today') + pd.Timedelta(days=1)).date()
+            next_day = (pd.to_datetime('today')).date()
             today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == next_day]
             # today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2025-10-21').date()] # --- for testing ---
             if today_games.empty:
