@@ -131,6 +131,12 @@ if "GAME_DATE" not in df.columns or "RESULT" not in df.columns:
     st.info("Historical result columns not found.")
 else:
     previous_df = df.loc[df["GAME_DATE"] < today_str].copy()
+    if "ACTUAL" in previous_df.columns:
+        previous_df = previous_df[previous_df["ACTUAL"].notna() & (previous_df["ACTUAL"] != "-")].copy()
+    elif "RESULT" in previous_df.columns:
+        previous_df = previous_df[previous_df["RESULT"].notna() & (previous_df["RESULT"] != "-")].copy()
+
+        
     if previous_df.empty:
         st.info("No previous games found.")
     else:
@@ -141,8 +147,11 @@ else:
         except Exception:
             st.markdown("**Model accuracy on previous games:** n/a")
 
+
+
+
         # Pretty result glyphs
-        previous_df["RESULT"] = previous_df["RESULT"].map({True: "✅", False: "❌"}).fillna("-")
+        previous_df["RESULT"] = previous_df["RESULT"].map({True: "✅", False: "❌"})#.fillna("-")
 
         # Highlight winning team/prob columns based on ACTUAL
         def highlight_actual(row):
