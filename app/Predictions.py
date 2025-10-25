@@ -109,20 +109,32 @@ else:
         st.caption(f"Found **{len(today_df)}** game(s) scheduled for today.")
         # Nicely formatted dataframe (percentages)
         try:
-            st.dataframe(
-                today_df.sort_values("GAME_DATE"),
-                width='stretch',
-                column_config={
-                    "PROB_HOME_WIN": st.column_config.NumberColumn("PROB_HOME_WIN", format="%.2f%%"),
-                    "PROB_AWAY_WIN": st.column_config.NumberColumn("PROB_AWAY_WIN", format="%.2f%%"),
-                },
-            )
+            # enforce a stable column order
+            desired = [
+            "GAME_DATE",
+            "HOME_ABBR",
+            "PROB_HOME_WIN",
+            "AWAY_ABBR",
+            "PROB_AWAY_WIN",
+            "WINNER PRED ABBS",
+            ]
+            cols = [c for c in desired if c in today_df.columns]
+            display_df = today_df[cols].sort_values("GAME_DATE")
+            col_cfg = {}
+            if "PROB_HOME_WIN" in cols:
+                col_cfg["PROB_HOME_WIN"] = st.column_config.NumberColumn("PROB_HOME_WIN", format="%.2f%%")
+            if "PROB_AWAY_WIN" in cols:
+                col_cfg["PROB_AWAY_WIN"] = st.column_config.NumberColumn("PROB_AWAY_WIN", format="%.2f%%")
+            st.dataframe(display_df, width="stretch", column_config=col_cfg)
         except Exception:
             # Fallback for older Streamlit versions
             show_df = today_df.copy()
-            show_df["PROB_HOME_WIN"] = show_df["PROB_HOME_WIN"].map(fmt_percent)
-            show_df["PROB_AWAY_WIN"] = show_df["PROB_AWAY_WIN"].map(fmt_percent)
-            st.dataframe(show_df.sort_values("GAME_DATE"), width='stretch')
+            if "PROB_HOME_WIN" in show_df.columns:
+                show_df["PROB_HOME_WIN"] = show_df["PROB_HOME_WIN"].map(fmt_percent)
+            if "PROB_AWAY_WIN" in show_df.columns:
+                show_df["PROB_AWAY_WIN"] = show_df["PROB_AWAY_WIN"].map(fmt_percent)
+            cols = [c for c in desired if c in show_df.columns]
+            st.dataframe(show_df[cols].sort_values("GAME_DATE"), width="stretch")
 
 # --- Previous games with results ---
 st.subheader("Previous Games With Results")
