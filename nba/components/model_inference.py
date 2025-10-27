@@ -103,33 +103,74 @@ class ModelInference:
         logging.info(f"Loaded model for inference.")
 
         self.teams_df = pd.DataFrame(teams.get_teams())
+        self.start_date = '2025-10-21'
 
+    # def games_today(self):
+    #     """
+    #         return a [N,2] list of tuples with [home_team_id, away_team_id]
+    #     """
+    #     try:
+    #         next_day = (pd.to_datetime('today')).date()
+    #         today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == next_day]
+    #         # today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2025-10-21').date()] # --- for testing ---
+    #         if today_games.empty:
+    #             logging.info("No games scheduled for today.")
+    #             return []
+    #         home_away_list = []
+    #         for i in range(len(today_games)):
+    #             game_id = int(today_games.iloc[i]['gameId'])
+    #             home_team_id = int(today_games.iloc[i]['homeTeam_teamId'])
+    #             away_team_id = int(today_games.iloc[i]['awayTeam_teamId'])
+    #             game_date = today_games.iloc[i]['gameDate']
+    #             home_away_list.append((home_team_id, away_team_id, game_id, game_date))
+    #         return home_away_list
+    #     except Exception as e:
+    #         raise NbaException(e, sys)   
 
     def games_today(self):
         """
             return a [N,2] list of tuples with [home_team_id, away_team_id]
         """
         try:
+            preds = self.storage.read_csv()
+            today = (pd.to_datetime('today')).date()
+            # determine last prediction date and build list of calendar dates to check (exclusive of last_date, inclusive of today)
+            if preds is not None and not preds.empty:
+                last_date_ts = pd.to_datetime(preds['GAME_DATE']).max()
+                last_date = last_date_ts.date()
+            else:
+                last_date = pd.to_datetime(self.start_date).date()
 
-            next_day = (pd.to_datetime('today')).date()
-            today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == next_day]
-            # today_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == pd.to_datetime('2025-10-21').date()] # --- for testing ---
-            if today_games.empty:
-                logging.info("No games scheduled for today.")
+            start_check = last_date + pd.Timedelta(days=1)
+            if start_check > today:
+                logging.info("No new dates between last predictions and today.")
                 return []
+
+            dates_to_check = pd.date_range(start=start_check, end=today, freq='D').date.tolist()
+
+            # use the list in a for loop to collect all games between last_date and today
             home_away_list = []
-            for i in range(len(today_games)):
-                game_id = int(today_games.iloc[i]['gameId'])
-                home_team_id = int(today_games.iloc[i]['homeTeam_teamId'])
-                away_team_id = int(today_games.iloc[i]['awayTeam_teamId'])
-                game_date = today_games.iloc[i]['gameDate']
-                home_away_list.append((home_team_id, away_team_id, game_id, game_date))
+            for check_date in dates_to_check:
+                day_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == check_date]
+                if day_games.empty:
+                    continue
+                for i in range(len(day_games)):
+                    game_id = int(day_games.iloc[i]['gameId'])
+                    home_team_id = int(day_games.iloc[i]['homeTeam_teamId'])
+                    away_team_id = int(day_games.iloc[i]['awayTeam_teamId'])
+                    game_date = day_games.iloc[i]['gameDate']
+                    home_away_list.append((home_team_id, away_team_id, game_id, game_date))
+
+            if not home_away_list:
+                logging.info("No games scheduled for the dates checked.")
+                return []
+
+            # return the aggregated list of games for downstream inference
             return home_away_list
-        except Exception as e:
-            raise NbaException(e, sys)    
+
 
     def inference_today_games(self):
-
+        
         winners = [] 
         for game_info in self.games_today():
             home_team_id, away_team_id, game_id, game_date = game_info
@@ -166,7 +207,6 @@ class ModelInference:
         return winners
 
     def update_actuals(self):
-
 
         preds = self.storage.read_csv()
         if preds is None or preds.empty:
