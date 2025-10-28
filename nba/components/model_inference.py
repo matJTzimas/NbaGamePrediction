@@ -103,7 +103,7 @@ class ModelInference:
         logging.info(f"Loaded model for inference.")
 
         self.teams_df = pd.DataFrame(teams.get_teams())
-        self.start_date = '2025-10-21'
+        self.start_date = '2025-10-20'
 
     # def games_today(self):
     #     """
@@ -134,6 +134,8 @@ class ModelInference:
         try:
             preds = self.storage.read_csv()
             today = (pd.to_datetime('today')).date()
+
+            stored_game_ids = preds['GAME_ID'].astype(int).tolist() if preds is not None and not preds.empty else []
             # determine last prediction date and build list of calendar dates to check (exclusive of last_date, inclusive of today)
             if preds is not None and not preds.empty:
                 last_date_ts = pd.to_datetime(preds['GAME_DATE']).max()
@@ -147,7 +149,6 @@ class ModelInference:
                 return []
 
             dates_to_check = pd.date_range(start=start_check, end=today, freq='D').date.tolist()
-
             # use the list in a for loop to collect all games between last_date and today
             home_away_list = []
             for check_date in dates_to_check:
@@ -155,6 +156,8 @@ class ModelInference:
                 if day_games.empty:
                     continue
                 for i in range(len(day_games)):
+                    if day_games.iloc[i]['gameId'] in stored_game_ids:
+                        continue
                     game_id = int(day_games.iloc[i]['gameId'])
                     home_team_id = int(day_games.iloc[i]['homeTeam_teamId'])
                     away_team_id = int(day_games.iloc[i]['awayTeam_teamId'])
@@ -167,13 +170,17 @@ class ModelInference:
 
             # return the aggregated list of games for downstream inference
             return home_away_list
+        except Exception as e:
+            raise NbaException(e, sys) 
 
 
     def inference_today_games(self):
-        
-        winners = [] 
+
         for game_info in self.games_today():
+            winners = [] 
+
             home_team_id, away_team_id, game_id, game_date = game_info
+            
             logging.info(f"Inference: Getting rosters for game {game_id} between {home_team_id} and {away_team_id}")
             home_roster = self.get_roster(home_team_id)
             away_roster = self.get_roster(away_team_id)
@@ -201,8 +208,8 @@ class ModelInference:
             else:
                 winners.append([game_id, game_date, home_team_id, away_team_id, home_prob.item(), "HOME"])
 
-        self.save_daily_predictions(winners)
-        self.update_actuals()
+            self.save_daily_predictions(winners)
+            self.update_actuals()
 
         return winners
 
@@ -212,7 +219,8 @@ class ModelInference:
         if preds is None or preds.empty:
             logging.info("No predictions to update actuals for.")
             return
-        game_logs = TeamGameLogs(season_nullable="2025-26",league_id_nullable='00').get_data_frames()[0]
+
+        game_logs = TeamGameLogs(season_nullable="2025-26",league_id_nullable='00',timeout=120).get_data_frames()[0]
         game_logs['GAME_DATE'] = pd.to_datetime(game_logs['GAME_DATE']).dt.date
 
         game_logs = game_logs[game_logs['MATCHUP'].str.contains(" vs. ", na=False)].reset_index(drop=True)
@@ -282,6 +290,8 @@ class ModelInference:
             if existing_df is not None:
                 df_winners = pd.concat([existing_df, df_winners], ignore_index=True)
 
+            
+
             self.storage.to_csv(df_winners)
 
 
@@ -333,7 +343,7 @@ class ModelInference:
         """
 
         # Gentle pause helps avoid throttling if calling repeatedly
-        time.sleep(0.4)
+        time.sleep(1)
         pcs = playercareerstats.PlayerCareerStats(
             player_id=player_id,
             per_mode36="PerGame",   # or 'Per36', 'Totals'
