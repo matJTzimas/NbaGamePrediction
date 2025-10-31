@@ -144,15 +144,20 @@ class ModelInference:
                 last_date = pd.to_datetime(self.start_date).date()
 
             start_check = last_date + pd.Timedelta(days=1)
+            logging.info(f"Checking for games from {start_check} to {today}")
             if start_check > today:
                 logging.info("No new dates between last predictions and today.")
                 return []
+        
 
-            dates_to_check = pd.date_range(start=start_check, end=today, freq='D').date.tolist()
+            dates_to_check = pd.date_range(start=self.start_date, end=today, freq='D').date.tolist()
+            logging.info(f"Checking the following dates for games: {dates_to_check}")
             # use the list in a for loop to collect all games between last_date and today
             home_away_list = []
             for check_date in dates_to_check:
+                logging.info(f"Checking for games on {check_date}")
                 day_games = self.scheduled_games.loc[self.scheduled_games['gameDate'] == check_date]
+                logging.info(f"Found {len(day_games)} games.")
                 if day_games.empty:
                     continue
                 for i in range(len(day_games)):
@@ -210,6 +215,9 @@ class ModelInference:
 
             self.save_daily_predictions(winners)
             self.update_actuals()
+        else:
+            logging.info("No games today to run inference for.")
+            return []
 
         return winners
 
