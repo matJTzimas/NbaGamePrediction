@@ -161,7 +161,7 @@ class ModelInference:
                 if day_games.empty:
                     continue
                 for i in range(len(day_games)):
-                    if day_games.iloc[i]['gameId'] in stored_game_ids:
+                    if int(day_games.iloc[i]['gameId']) in stored_game_ids:
                         continue
                     game_id = int(day_games.iloc[i]['gameId'])
                     home_team_id = int(day_games.iloc[i]['homeTeam_teamId'])
@@ -298,7 +298,10 @@ class ModelInference:
             if existing_df is not None:
                 df_winners = pd.concat([existing_df, df_winners], ignore_index=True)
 
-            
+            # if 'GAME_ID' in df_winners.columns:
+            #     df_winners = df_winners.drop_duplicates(subset=['GAME_ID'], keep='last').reset_index(drop=True)
+            # else:
+            #     df_winners = df_winners.drop_duplicates().reset_index(drop=True)
 
             self.storage.to_csv(df_winners)
 
