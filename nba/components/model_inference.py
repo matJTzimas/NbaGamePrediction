@@ -142,12 +142,6 @@ class ModelInference:
                 last_date = last_date_ts.date()
             else:
                 last_date = pd.to_datetime(self.start_date).date()
-
-            start_check = last_date + pd.Timedelta(days=1)
-            logging.info(f"Checking for games from {start_check} to {today}")
-            if start_check > today:
-                logging.info("No new dates between last predictions and today.")
-                return []
         
 
             dates_to_check = pd.date_range(start=self.start_date, end=today, freq='D').date.tolist()

@@ -4,9 +4,8 @@ from nba.constants import training
 from datetime import datetime
 from nba.exception.exception import NbaException
 
-
-
 class DataIngestionConfig:
+
     def __init__(self):
         self.data_ingestion_dir = os.path.join(
             training.DATA_FOLDER, training.DATA_INGESTION_DIR_NAME

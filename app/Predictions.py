@@ -190,16 +190,16 @@ else:
 
         styled_prev = ordered.style.apply(highlight_actual, axis=1)
         # styled_prev = styled_prev[prev_cols]
-        mask = ((previous_df["PROB_HOME_WIN"] > 0.6) | (previous_df["PROB_AWAY_WIN"] > 0.6))
+        mask = ((previous_df["PROB_HOME_WIN"] > 0.645) | (previous_df["PROB_AWAY_WIN"] > 0.645))
         confident_df = previous_df.loc[mask]
 
         if len(confident_df) > 0:
             try:
                 correct_preds = len(confident_df[confident_df["RESULT"] == "✅"])
                 conf_accuracy = (correct_preds / len(confident_df)) * 100.0
-                st.markdown(f"**Model accuracy on previous games with confident predictions (>60%):** {conf_accuracy:.2f}%")
+                st.markdown(f"**Model accuracy on previous games with confident predictions (>65%):** {conf_accuracy:.2f}%")
             except Exception:
-                st.markdown("**Model accuracy on previous games with confident predictions (>60%):** n/a")
+                st.markdown("**Model accuracy on previous games with confident predictions (>65%):** n/a")
         try:
             st.dataframe(
                 styled_prev,
